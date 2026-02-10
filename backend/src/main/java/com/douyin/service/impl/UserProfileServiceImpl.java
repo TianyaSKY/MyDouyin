@@ -1,0 +1,75 @@
+package com.douyin.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.douyin.dto.LoginRequest;
+import com.douyin.dto.RegisterRequest;
+import com.douyin.dto.TokenResponse;
+import com.douyin.entity.UserProfile;
+import com.douyin.mapper.UserProfileMapper;
+import com.douyin.security.JwtUtils;
+import com.douyin.service.UserProfileService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserProfile>
+        implements UserProfileService {
+
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
+
+    @Override
+    public UserProfile getByUsername(String username) {
+        return getOne(new LambdaQueryWrapper<UserProfile>()
+                .eq(UserProfile::getUsername, username));
+    }
+
+    @Override
+    @Transactional
+    public TokenResponse register(RegisterRequest request) {
+        // Check if username already exists
+        if (getByUsername(request.getUsername()) != null) {
+            throw new RuntimeException("用户名已存在");
+        }
+
+        // Create user
+        UserProfile user = new UserProfile();
+        user.setUsername(request.getUsername());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setNickname(request.getNickname() != null ? request.getNickname() : request.getUsername());
+        save(user);
+
+        // Generate token
+        return buildTokenResponse(user);
+    }
+
+    @Override
+    public TokenResponse login(LoginRequest request) {
+        UserProfile user = getByUsername(request.getUsername());
+        if (user == null) {
+            throw new RuntimeException("用户名或密码错误");
+        }
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("用户名或密码错误");
+        }
+
+        return buildTokenResponse(user);
+    }
+
+    // ---- internal ----
+
+    private TokenResponse buildTokenResponse(UserProfile user) {
+        String token = jwtUtils.generateToken(user.getUserId(), user.getUsername());
+
+        return TokenResponse.builder()
+                .token(token)
+                .expiresIn(jwtUtils.getExpiration() / 1000) // seconds
+                .user(user)
+                .build();
+    }
+}
