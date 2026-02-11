@@ -17,4 +17,11 @@ public interface VideoStatsDailyService extends IService<VideoStatsDaily> {
      * Insert or update stats (upsert).
      */
     boolean saveOrUpdateStats(VideoStatsDaily stats);
+    /**
+     * Increment stats counters for a video on the current date.
+     * @param videoId the video ID
+     * @param eventType the type of event (impr, click, like, finish)
+     * @param watchMs watch time in milliseconds (to add to sum)
+     */
+    void incrementStats(Long videoId, com.douyin.enums.EventType eventType, int watchMs);
 }

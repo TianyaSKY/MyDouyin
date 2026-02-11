@@ -48,6 +48,7 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/{id}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/feed").permitAll()
                 .requestMatchers(HttpMethod.GET, "/uploads/videos/**").permitAll()
 
                 // All other endpoints require authentication
@@ -57,9 +58,9 @@ public class SecurityConfig {
             // Custom 401/403 handler
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, authException) ->
-                    writeErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "Î´µÇÂ¼»ò Token ÒÑ¹ıÆÚ"))
+                    writeErrorResponse(response, HttpServletResponse.SC_UNAUTHORIZED, "æœªç™»å½•æˆ– Token å·²è¿‡æœŸ"))
                 .accessDeniedHandler((request, response, accessDeniedException) ->
-                    writeErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "È¨ÏŞ²»×ã"))
+                    writeErrorResponse(response, HttpServletResponse.SC_FORBIDDEN, "æƒé™ä¸è¶³"))
             )
 
             // Add JWT filter before UsernamePasswordAuthenticationFilter

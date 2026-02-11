@@ -25,6 +25,8 @@ public class VideoStatsDaily {
 
     private Integer finishCnt;
 
+    private Integer shareCnt;
+
     /**
      * Total watch time in milliseconds.
      */

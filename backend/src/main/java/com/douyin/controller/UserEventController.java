@@ -9,6 +9,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.douyin.config.RabbitMQConfig;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
 import java.util.List;
 
 @RestController
@@ -17,6 +20,7 @@ import java.util.List;
 public class UserEventController {
 
     private final UserEventService userEventService;
+    private final RabbitTemplate rabbitTemplate;
 
     /**
      * GET /api/events/{id} - Get event by ID
@@ -64,7 +68,14 @@ public class UserEventController {
      */
     @PostMapping
     public Result<UserEvent> create(@Valid @RequestBody UserEvent event) {
-        userEventService.save(event);
+        // Send to MQ for async processing (save raw log + aggregate stats)
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY,
+                event
+        );
+        // We can't return the saved ID immediately if it's async,
+        // but for frontend purposes, returning the input object is usually fine.
         return Result.ok(event);
     }
 
@@ -73,7 +84,13 @@ public class UserEventController {
      */
     @PostMapping("/batch")
     public Result<Void> batchCreate(@Valid @RequestBody List<UserEvent> events) {
-        userEventService.saveBatch(events);
+        for (UserEvent event : events) {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.EXCHANGE_NAME,
+                    RabbitMQConfig.ROUTING_KEY,
+                    event
+            );
+        }
         return Result.ok();
     }
 

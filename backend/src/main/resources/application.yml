@@ -48,3 +48,8 @@ app:
     temp-dir: tmp
     video-dir: videos
     url-prefix: /uploads/videos/
+
+# Milvus Configuration
+milvus:
+  host: localhost
+  port: 19530

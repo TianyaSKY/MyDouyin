@@ -14,7 +14,7 @@ This document provides essential guidelines for AI agents and developers working
 - **MySQL (Primary DB):** Stores Users, Videos, Metadata.
 - **Milvus (Vector DB):** Stores `video_embedding` for retrieval.
 - **Redis (Cache):** Hot data, counters (video stats), session storage.
-- **MinIO (Object Storage):** Stores video files and covers.
+- **Local Filesystem:** Stores video files and covers.
 - **RabbitMQ (Message Queue):** Async processing (video upload events, stats aggregation).
 
 ## 2. Environment & Commands

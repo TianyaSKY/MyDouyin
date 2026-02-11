@@ -5,63 +5,64 @@ USE douyin;
 
 -- 1. User Profile
 CREATE TABLE IF NOT EXISTS user_profile (
-    user_id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(64) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL COMMENT 'BCrypt hashed password',
-    nickname VARCHAR(64) NULL COMMENT 'Display name',
-    avatar_url VARCHAR(512) NULL COMMENT 'Avatar image URL',
-    long_vec JSON NULL COMMENT 'User interest vector for long-term recall',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+    user_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
+    username VARCHAR(64) NOT NULL UNIQUE COMMENT '用户名',
+    password VARCHAR(255) NOT NULL COMMENT '加密后的密码',
+    nickname VARCHAR(64) NULL COMMENT '昵称',
+    avatar_url VARCHAR(512) NULL COMMENT '头像URL',
+    long_vec JSON NULL COMMENT '用户长期兴趣向量',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) COMMENT '用户个人资料表';
 
 -- 2. Video Metadata
 CREATE TABLE IF NOT EXISTS video (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    author_id BIGINT NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    tags JSON NULL COMMENT 'List of tags or VARCHAR(512)',
-    status TINYINT NOT NULL DEFAULT 0 COMMENT '0: Review, 1: Published, 2: Deleted',
-    cover_url VARCHAR(512) NULL,
-    video_url VARCHAR(512) NOT NULL COMMENT 'MinIO URL',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '视频ID',
+    author_id BIGINT NOT NULL COMMENT '作者ID',
+    title VARCHAR(255) NOT NULL COMMENT '视频标题',
+    tags JSON NULL COMMENT '视频标签',
+    status TINYINT NOT NULL DEFAULT 0 COMMENT '状态(0:审核中, 1:已发布, 2:已删除)',
+    cover_url VARCHAR(512) NULL COMMENT '封面图URL',
+    video_url VARCHAR(512) NOT NULL COMMENT '视频文件URL',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     INDEX idx_author (author_id),
     INDEX idx_created_at (created_at)
-);
+) COMMENT '视频元数据表';
 
 -- 3. Video Stats Daily (Aggregated counters)
 -- In production, this might be written from Redis to DB periodically
 CREATE TABLE IF NOT EXISTS video_stats_daily (
-    video_id BIGINT NOT NULL,
-    date DATE NOT NULL,
-    impr_cnt INT DEFAULT 0,
-    click_cnt INT DEFAULT 0,
-    like_cnt INT DEFAULT 0,
-    finish_cnt INT DEFAULT 0,
-    watch_time_sum BIGINT DEFAULT 0 COMMENT 'Total watch time in ms',
+    video_id BIGINT NOT NULL COMMENT '视频ID',
+    date DATE NOT NULL COMMENT '统计日期',
+    impr_cnt INT DEFAULT 0 COMMENT '曝光次数',
+    click_cnt INT DEFAULT 0 COMMENT '点击次数',
+    like_cnt INT DEFAULT 0 COMMENT '点赞次数',
+    finish_cnt INT DEFAULT 0 COMMENT '完播次数',
+    share_cnt INT DEFAULT 0 COMMENT '分享次数',
+    watch_time_sum BIGINT DEFAULT 0 COMMENT '总观看时长(毫秒)',
     PRIMARY KEY (video_id, date)
-);
+) COMMENT '视频每日统计表';
 
 -- 4. User Event (Raw interaction logs for training)
 CREATE TABLE IF NOT EXISTS user_event (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,
-    video_id BIGINT NOT NULL,
-    event_type ENUM('impr', 'click', 'like', 'finish', 'share') NOT NULL,
-    watch_ms INT DEFAULT 0,
-    ctx JSON NULL COMMENT 'Context: device, entry_point, timestamp',
-    ts DATETIME DEFAULT CURRENT_TIMESTAMP,
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    video_id BIGINT NOT NULL COMMENT '视频ID',
+    event_type ENUM('impr', 'click', 'like', 'finish', 'share') NOT NULL COMMENT '事件类型(曝光, 点击, 点赞, 完播, 分享)',
+    watch_ms INT DEFAULT 0 COMMENT '观看时长(毫秒)',
+    ctx JSON NULL COMMENT '上下文信息(设备, 入口, 时间戳等)',
+    ts DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '事件发生时间',
     INDEX idx_user_video (user_id, video_id),
     INDEX idx_ts (ts)
-);
+) COMMENT '用户行为日志表';
 
 -- 5. File Asset (for hash instant upload)
 CREATE TABLE IF NOT EXISTS file_asset (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    file_hash VARCHAR(64) NOT NULL COMMENT 'MD5(32) or SHA-256(64) hex',
-    file_size BIGINT NOT NULL,
-    file_name VARCHAR(255) NOT NULL,
-    video_url VARCHAR(512) NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    file_hash VARCHAR(64) NOT NULL COMMENT '文件哈希值(MD5/SHA-256)',
+    file_size BIGINT NOT NULL COMMENT '文件大小',
+    file_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
+    video_url VARCHAR(512) NOT NULL COMMENT '视频存储URL',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     UNIQUE KEY uk_file_hash (file_hash)
-);
+) COMMENT '文件资源表(用于秒传)';
