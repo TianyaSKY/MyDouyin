@@ -39,6 +39,13 @@ public class UserProfile {
     @TableField(typeHandler = JacksonTypeHandler.class)
     private List<Double> longVec;
 
+    /**
+     * User interest tags with weights (stored as JSON object).
+     * Example: {"科技": 0.8, "美食": 0.6, "旅游": 0.4}
+     */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private java.util.Map<String, Double> interestTags;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

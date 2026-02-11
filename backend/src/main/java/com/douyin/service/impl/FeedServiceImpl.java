@@ -11,6 +11,8 @@ import com.douyin.enums.EventType;
 import com.douyin.enums.VideoStatus;
 import com.douyin.service.IFeedService;
 import com.douyin.service.IMilvusService;
+import com.douyin.service.UserEmbeddingService;
+import com.douyin.service.UserTagService;
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoStatsDailyService;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,8 @@ public class FeedServiceImpl implements IFeedService {
     private final VideoService videoService;
     private final VideoStatsDailyService videoStatsDailyService;
     private final IMilvusService milvusService;
+    private final UserTagService userTagService;
+    private final UserEmbeddingService userEmbeddingService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RabbitTemplate rabbitTemplate;
 
@@ -152,23 +156,74 @@ public class FeedServiceImpl implements IFeedService {
      */
     private List<RecallCandidate> recallByTags(Long userId, int size) {
         try {
-            // TODO: 从用户历史行为中提取兴趣标签
-            // 当前简化：随机返回一些已发布的视频
-            List<Video> videos = videoService.list(
-                new LambdaQueryWrapper<Video>()
-                    .eq(Video::getStatus, VideoStatus.PUBLISHED)
-                    .orderByDesc(Video::getCreatedAt)
-                    .last("LIMIT " + size)
-            );
+            // 1. 获取用户兴趣标签（Top 5）
+            Map<String, Double> userTags = getUserTopInterestTags(userId, 5);
+            
+            if (userTags.isEmpty()) {
+                log.debug("User {} has no interest tags, fallback to recent videos", userId);
+                return fallbackTagRecall(size);
+            }
 
-            return videos.stream()
-                .map(video -> new RecallCandidate(video, 50.0, "tag"))
-                .collect(Collectors.toList());
+            // 2. 根据用户标签召回视频
+            List<RecallCandidate> candidates = new ArrayList<>();
+            
+            for (Map.Entry<String, Double> tagEntry : userTags.entrySet()) {
+                String tag = tagEntry.getKey();
+                Double tagWeight = tagEntry.getValue();
+                
+                // 查询包含该标签的视频
+                List<Video> videos = videoService.list(
+                    new LambdaQueryWrapper<Video>()
+                        .eq(Video::getStatus, VideoStatus.PUBLISHED)
+                        .apply("JSON_CONTAINS(tags, JSON_QUOTE({0}))", tag)
+                        .orderByDesc(Video::getCreatedAt)
+                        .last("LIMIT " + (size / userTags.size() + 1))
+                );
+
+                // 计算召回分数：标签权重 * 100
+                for (Video video : videos) {
+                    double score = tagWeight * 100;
+                    candidates.add(new RecallCandidate(video, score, "tag:" + tag));
+                }
+            }
+
+            log.info("Tag recall for user {}: {} candidates from {} tags", 
+                userId, candidates.size(), userTags.size());
+            
+            return candidates;
 
         } catch (Exception e) {
             log.error("Error recalling by tags", e);
-            return new ArrayList<>();
+            return fallbackTagRecall(size);
         }
+    }
+
+    /**
+     * 获取用户兴趣标签（从 UserProfile）
+     */
+    private Map<String, Double> getUserTopInterestTags(Long userId, int topN) {
+        try {
+            return userTagService.getUserTopTags(userId, topN);
+        } catch (Exception e) {
+            log.error("Error getting user tags", e);
+            return new LinkedHashMap<>();
+        }
+    }
+
+    /**
+     * 标签召回兜底
+     */
+    private List<RecallCandidate> fallbackTagRecall(int size) {
+        List<Video> videos = videoService.list(
+            new LambdaQueryWrapper<Video>()
+                .eq(Video::getStatus, VideoStatus.PUBLISHED)
+                .orderByDesc(Video::getCreatedAt)
+                .last("LIMIT " + size)
+        );
+
+        return videos.stream()
+            .map(video -> new RecallCandidate(video, 30.0, "tag_fallback"))
+            .collect(Collectors.toList());
     }
 
     /**
@@ -176,8 +231,13 @@ public class FeedServiceImpl implements IFeedService {
      */
     private List<RecallCandidate> recallByVector(Long userId, int size) {
         try {
-            // 获取用户兴趣向量
-            List<Float> userVector = milvusService.getUserVector(userId);
+            // 获取用户融合向量（短期70% + 长期30%）
+            List<Float> userVector = userEmbeddingService.getFusedVector(userId, 0.7);
+            
+            if (userVector.isEmpty() || userVector.stream().allMatch(v -> v == 0.0f)) {
+                log.debug("User {} has no valid vector, skip vector recall", userId);
+                return new ArrayList<>();
+            }
             
             // 向量检索
             List<Long> videoIds = milvusService.searchSimilarVideos(userVector, size);

@@ -2,7 +2,10 @@ package com.douyin.mq;
 
 import com.douyin.config.RabbitMQConfig;
 import com.douyin.entity.UserEvent;
+import com.douyin.enums.EventType;
+import com.douyin.service.UserEmbeddingService;
 import com.douyin.service.UserEventService;
+import com.douyin.service.UserTagService;
 import com.douyin.service.VideoStatsDailyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +19,8 @@ public class UserEventConsumer {
 
     private final UserEventService userEventService;
     private final VideoStatsDailyService videoStatsDailyService;
+    private final UserTagService userTagService;
+    private final UserEmbeddingService userEmbeddingService;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void handleUserEvent(UserEvent event) {
@@ -38,10 +43,39 @@ public class UserEventConsumer {
                     event.getWatchMs() != null ? event.getWatchMs() : 0
             );
 
+            // 3. Update user interest tags (only for meaningful interactions)
+            if (shouldUpdateUserTags(event.getEventType())) {
+                userTagService.updateUserTagsByEvent(
+                    event.getUserId(),
+                    event.getVideoId(),
+                    event.getEventType()
+                );
+            }
+
+            // 4. Update user realtime embedding vector
+            if (shouldUpdateUserTags(event.getEventType())) {
+                userEmbeddingService.updateRealtimeVector(
+                    event.getUserId(),
+                    event.getVideoId(),
+                    event.getEventType()
+                );
+            }
+
         } catch (Exception e) {
             log.error("Failed to process UserEvent: {}", event, e);
             // In production, we might want to throw exception to retry or send to DLQ.
             // For now, just log error.
         }
+    }
+
+    /**
+     * 判断是否需要更新用户标签
+     * 曝光事件权重太低，可以选择性忽略
+     */
+    private boolean shouldUpdateUserTags(EventType eventType) {
+        return eventType == EventType.CLICK 
+            || eventType == EventType.LIKE 
+            || eventType == EventType.FINISH 
+            || eventType == EventType.SHARE;
     }
 }

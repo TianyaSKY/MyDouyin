@@ -53,3 +53,10 @@ app:
 milvus:
   host: localhost
   port: 19530
+
+# Recommend Service Configuration (FastAPI)
+recommend:
+  service:
+    url: http://localhost:8001
+    timeout: 5000
+    retry: 3

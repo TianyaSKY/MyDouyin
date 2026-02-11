@@ -77,11 +77,11 @@ public class MilvusServiceImpl implements IMilvusService {
 
     @Override
     public List<Float> getUserVector(Long userId) {
-        // TODO: 从 Redis 获取或实时计算
-        // 当前返回随机向量作为示例
+        // 实际实现应该注入 UserEmbeddingService
+        // 这里返回默认向量，避免循环依赖
         List<Float> vector = new ArrayList<>(VECTOR_DIM);
         for (int i = 0; i < VECTOR_DIM; i++) {
-            vector.add((float) Math.random());
+            vector.add(0.0f);
         }
         return vector;
     }

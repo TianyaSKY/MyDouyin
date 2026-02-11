@@ -1,0 +1,100 @@
+"""
+用户向量计算服务
+"""
+import torch
+import numpy as np
+import logging
+from typing import List, Dict
+from datetime import datetime
+from app.services.model_service import model_manager
+
+logger = logging.getLogger(__name__)
+
+
+class UserEmbeddingService:
+    """用户向量计算服务"""
+    
+    # 行为权重映射
+    EVENT_WEIGHTS = {
+        "CLICK": 0.3,
+        "LIKE": 1.0,
+        "FINISH": 1.5,
+        "SHARE": 2.0
+    }
+    
+    @staticmethod
+    def calculate_embedding(user_id: int, recent_events: List[Dict]) -> List[float]:
+        """
+        计算用户实时向量
+        
+        Args:
+            user_id: 用户ID
+            recent_events: 最近的交互行为列表
+            
+        Returns:
+            128维用户向量
+        """
+        try:
+            if not recent_events:
+                # 返回默认向量
+                return [0.0] * 128
+            
+            # 1. 准备数据
+            video_embeddings = []
+            weights = []
+            
+            for event in recent_events:
+                video_emb = event.get("video_embedding", [])
+                if len(video_emb) != 128:
+                    continue
+                
+                # 计算权重：行为权重 × 时间衰减
+                event_type = event.get("event_type", "CLICK")
+                behavior_weight = UserEmbeddingService.EVENT_WEIGHTS.get(event_type, 0.3)
+                
+                # 时间衰减
+                timestamp = event.get("timestamp")
+                if timestamp:
+                    try:
+                        event_time = datetime.fromisoformat(timestamp)
+                        hours_diff = (datetime.now() - event_time).total_seconds() / 3600
+                        time_decay = np.exp(-0.01 * hours_diff)
+                    except:
+                        time_decay = 1.0
+                else:
+                    time_decay = 1.0
+                
+                final_weight = behavior_weight * time_decay
+                
+                video_embeddings.append(video_emb)
+                weights.append(final_weight)
+            
+            if not video_embeddings:
+                return [0.0] * 128
+            
+            # 2. 转为 Tensor
+            video_emb_tensor = torch.tensor(
+                [video_embeddings], 
+                dtype=torch.float32
+            ).to(model_manager.device)
+            
+            weights_tensor = torch.tensor(
+                [[w] for w in weights], 
+                dtype=torch.float32
+            ).unsqueeze(0).to(model_manager.device)
+            
+            # 3. 模型推理
+            with torch.no_grad():
+                user_embedding = model_manager.user_encoder(video_emb_tensor, weights_tensor)
+                user_embedding = user_embedding.cpu().numpy()[0].tolist()
+            
+            logger.info(f"Calculated user embedding for user {user_id} from {len(video_embeddings)} events")
+            return user_embedding
+            
+        except Exception as e:
+            logger.error(f"Error calculating user embedding: {e}")
+            raise
+
+
+user_embedding_service = UserEmbeddingService()
+

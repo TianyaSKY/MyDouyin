@@ -7,7 +7,7 @@
       <sourceFolder url="file://$MODULE_DIR$/frontend" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/recommend" isTestSource="false" />
     </content>
-    <orderEntry type="jdk" jdkName="openjdk-24" jdkType="JavaSDK" />
+    <orderEntry type="jdk" jdkName="Douyin" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
