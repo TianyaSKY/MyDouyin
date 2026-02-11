@@ -13,11 +13,14 @@ import java.util.List;
 
 /**
  * 用户标签定时任务
- * 定期衰减用户标签权重，避免历史兴趣影响过大
+ * 
+ * @deprecated 用户兴趣已改用向量存储，标签衰减任务已废弃
+ * 向量更新由离线任务处理
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@Deprecated
 public class UserTagScheduler {
 
     private final UserProfileService userProfileService;
@@ -25,46 +28,14 @@ public class UserTagScheduler {
 
     /**
      * 每天凌晨2点执行标签衰减
-     * 衰减因子：0.98（每天衰减2%）
+     * 
+     * @deprecated 已废弃，向量更新由离线任务处理
      */
-    @Scheduled(cron = "0 0 2 * * ?")
+    // @Scheduled(cron = "0 0 2 * * ?")  // 已禁用
+    @Deprecated
     public void decayAllUserTags() {
-        log.info("Starting daily user tag decay task...");
-        
-        try {
-            // 分批处理用户
-            int pageSize = 100;
-            int currentPage = 1;
-            int totalDecayed = 0;
-            
-            while (true) {
-                List<UserProfile> users = userProfileService.list(
-                    new LambdaQueryWrapper<UserProfile>()
-                        .isNotNull(UserProfile::getInterestTags)
-                        .last("LIMIT " + ((currentPage - 1) * pageSize) + ", " + pageSize)
-                );
-                
-                if (users.isEmpty()) {
-                    break;
-                }
-                
-                for (UserProfile user : users) {
-                    try {
-                        userTagService.decayUserTags(user.getUserId(), 0.98);
-                        totalDecayed++;
-                    } catch (Exception e) {
-                        log.error("Failed to decay tags for user: {}", user.getUserId(), e);
-                    }
-                }
-                
-                currentPage++;
-            }
-            
-            log.info("User tag decay task completed. Total users processed: {}", totalDecayed);
-            
-        } catch (Exception e) {
-            log.error("Error in user tag decay task", e);
-        }
+        log.info("User tag decay task is deprecated, skipping...");
+        // 不再执行标签衰减
     }
 }
 

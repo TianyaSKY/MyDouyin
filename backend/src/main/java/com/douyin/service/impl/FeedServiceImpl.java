@@ -12,7 +12,7 @@ import com.douyin.enums.VideoStatus;
 import com.douyin.service.IFeedService;
 import com.douyin.service.IMilvusService;
 import com.douyin.service.UserEmbeddingService;
-import com.douyin.service.UserTagService;
+// import com.douyin.service.UserTagService; // 已废弃，改用向量召回
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoStatsDailyService;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +34,7 @@ public class FeedServiceImpl implements IFeedService {
     private final VideoService videoService;
     private final VideoStatsDailyService videoStatsDailyService;
     private final IMilvusService milvusService;
-    private final UserTagService userTagService;
+    // private final UserTagService userTagService; // 已废弃，改用向量召回
     private final UserEmbeddingService userEmbeddingService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RabbitTemplate rabbitTemplate;
@@ -74,25 +74,19 @@ public class FeedServiceImpl implements IFeedService {
     }
 
     /**
-     * 多路召回：热门池 + 标签匹配 + 向量召回
+     * 多路召回：热门池 + 向量召回（已移除标签召回）
      */
     private List<RecallCandidate> multiRecall(Long userId, int totalSize) {
         List<RecallCandidate> allCandidates = new ArrayList<>();
 
-        // 路径1: 热门池召回（50%）
-        int hotSize = totalSize / 2;
+        // 路径1: 热门池召回（40%）
+        int hotSize = totalSize * 2 / 5;
         List<RecallCandidate> hotCandidates = recallFromHot(hotSize);
         allCandidates.addAll(hotCandidates);
         log.info("Hot recall: {} videos", hotCandidates.size());
 
-        // 路径2: 标签召回（30%）
-        int tagSize = totalSize * 3 / 10;
-        List<RecallCandidate> tagCandidates = recallByTags(userId, tagSize);
-        allCandidates.addAll(tagCandidates);
-        log.info("Tag recall: {} videos", tagCandidates.size());
-
-        // 路径3: 向量召回（20%）
-        int vectorSize = totalSize / 5;
+        // 路径2: 向量召回（60%，主要召回路径）
+        int vectorSize = totalSize * 3 / 5;
         List<RecallCandidate> vectorCandidates = recallByVector(userId, vectorSize);
         allCandidates.addAll(vectorCandidates);
         log.info("Vector recall: {} videos", vectorCandidates.size());
@@ -152,82 +146,8 @@ public class FeedServiceImpl implements IFeedService {
     }
 
     /**
-     * 路径2: 基于标签召回
-     */
-    private List<RecallCandidate> recallByTags(Long userId, int size) {
-        try {
-            // 1. 获取用户兴趣标签（Top 5）
-            Map<String, Double> userTags = getUserTopInterestTags(userId, 5);
-            
-            if (userTags.isEmpty()) {
-                log.debug("User {} has no interest tags, fallback to recent videos", userId);
-                return fallbackTagRecall(size);
-            }
-
-            // 2. 根据用户标签召回视频
-            List<RecallCandidate> candidates = new ArrayList<>();
-            
-            for (Map.Entry<String, Double> tagEntry : userTags.entrySet()) {
-                String tag = tagEntry.getKey();
-                Double tagWeight = tagEntry.getValue();
-                
-                // 查询包含该标签的视频
-                List<Video> videos = videoService.list(
-                    new LambdaQueryWrapper<Video>()
-                        .eq(Video::getStatus, VideoStatus.PUBLISHED)
-                        .apply("JSON_CONTAINS(tags, JSON_QUOTE({0}))", tag)
-                        .orderByDesc(Video::getCreatedAt)
-                        .last("LIMIT " + (size / userTags.size() + 1))
-                );
-
-                // 计算召回分数：标签权重 * 100
-                for (Video video : videos) {
-                    double score = tagWeight * 100;
-                    candidates.add(new RecallCandidate(video, score, "tag:" + tag));
-                }
-            }
-
-            log.info("Tag recall for user {}: {} candidates from {} tags", 
-                userId, candidates.size(), userTags.size());
-            
-            return candidates;
-
-        } catch (Exception e) {
-            log.error("Error recalling by tags", e);
-            return fallbackTagRecall(size);
-        }
-    }
-
-    /**
-     * 获取用户兴趣标签（从 UserProfile）
-     */
-    private Map<String, Double> getUserTopInterestTags(Long userId, int topN) {
-        try {
-            return userTagService.getUserTopTags(userId, topN);
-        } catch (Exception e) {
-            log.error("Error getting user tags", e);
-            return new LinkedHashMap<>();
-        }
-    }
-
-    /**
-     * 标签召回兜底
-     */
-    private List<RecallCandidate> fallbackTagRecall(int size) {
-        List<Video> videos = videoService.list(
-            new LambdaQueryWrapper<Video>()
-                .eq(Video::getStatus, VideoStatus.PUBLISHED)
-                .orderByDesc(Video::getCreatedAt)
-                .last("LIMIT " + size)
-        );
-
-        return videos.stream()
-            .map(video -> new RecallCandidate(video, 30.0, "tag_fallback"))
-            .collect(Collectors.toList());
-    }
-
-    /**
-     * 路径3: 基于向量召回（Milvus）
+     * 路径2: 基于向量召回（Milvus）
+     * 已移除标签召回，改用向量召回
      */
     private List<RecallCandidate> recallByVector(Long userId, int size) {
         try {
@@ -235,26 +155,27 @@ public class FeedServiceImpl implements IFeedService {
             List<Float> userVector = userEmbeddingService.getFusedVector(userId, 0.7);
             
             if (userVector.isEmpty() || userVector.stream().allMatch(v -> v == 0.0f)) {
-                log.debug("User {} has no valid vector, skip vector recall", userId);
-                return new ArrayList<>();
+                log.debug("User {} has no valid vector, fallback to recent videos", userId);
+                return fallbackRecallFromDB(size);
             }
             
             // 向量检索
             List<Long> videoIds = milvusService.searchSimilarVideos(userVector, size);
             
             if (videoIds.isEmpty()) {
-                return new ArrayList<>();
+                log.debug("Vector recall returned no results, fallback to recent videos");
+                return fallbackRecallFromDB(size);
             }
 
             List<Video> videos = videoService.listByIds(videoIds);
             
             return videos.stream()
-                .map(video -> new RecallCandidate(video, 30.0, "vector"))
+                .map(video -> new RecallCandidate(video, 50.0, "vector"))
                 .collect(Collectors.toList());
 
         } catch (Exception e) {
             log.error("Error recalling by vector", e);
-            return new ArrayList<>();
+            return fallbackRecallFromDB(size);
         }
     }
 

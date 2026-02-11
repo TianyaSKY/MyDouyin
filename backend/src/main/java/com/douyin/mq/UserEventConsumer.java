@@ -43,14 +43,12 @@ public class UserEventConsumer {
                     event.getWatchMs() != null ? event.getWatchMs() : 0
             );
 
-            // 3. Update user interest tags (only for meaningful interactions)
-            if (shouldUpdateUserTags(event.getEventType())) {
-                userTagService.updateUserTagsByEvent(
-                    event.getUserId(),
-                    event.getVideoId(),
-                    event.getEventType()
-                );
-            }
+            // 3. Update user interest tags (DEPRECATED - now using vectors)
+            // userTagService.updateUserTagsByEvent(
+            //     event.getUserId(),
+            //     event.getVideoId(),
+            //     event.getEventType()
+            // );
 
             // 4. Update user realtime embedding vector
             if (shouldUpdateUserTags(event.getEventType())) {

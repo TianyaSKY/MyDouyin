@@ -10,11 +10,9 @@ CREATE TABLE IF NOT EXISTS user_profile (
     password VARCHAR(255) NOT NULL COMMENT '加密后的密码',
     nickname VARCHAR(64) NULL COMMENT '昵称',
     avatar_url VARCHAR(512) NULL COMMENT '头像URL',
-    long_vec JSON NULL COMMENT '用户长期兴趣向量',
-    interest_tags JSON NULL COMMENT '用户兴趣标签及权重 {"科技": 0.8, "美食": 0.6}',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) COMMENT '用户个人资料表';
+) COMMENT '用户个人资料表（向量已迁移到 Milvus）';
 
 -- 2. Video Metadata
 CREATE TABLE IF NOT EXISTS video (

@@ -3,6 +3,7 @@
 """
 from fastapi import APIRouter, HTTPException
 import logging
+from typing import List
 
 from app.schemas import (
     VideoEmbeddingRequest,
@@ -18,6 +19,7 @@ from app.services import (
     video_embedding_service,
     user_embedding_service,
     ranking_service,
+    milvus_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -132,4 +134,137 @@ async def rank_videos(request: RankRequest):
     except Exception as e:
         logger.error(f"Error ranking videos: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 用户向量管理 API ====================
+
+@router.get("/user/vector/long-term/{user_id}")
+async def get_user_long_term_vector(user_id: int):
+    """
+    获取用户长期向量（从 Milvus）
+    
+    - **user_id**: 用户ID
+    """
+    try:
+        vectors = milvus_service.get_user_vectors(user_id)
+        
+        if vectors is None:
+            raise HTTPException(status_code=404, detail="User vector not found")
+        
+        return {
+            "user_id": user_id,
+            "vector": vectors["long_term_vec"],
+            "dimension": len(vectors["long_term_vec"]),
+            "updated_at": vectors["updated_at"]
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user long-term vector: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/user/vector/long-term")
+async def update_user_long_term_vector(request: dict):
+    """
+    更新用户长期向量（到 Milvus）
+    
+    - **user_id**: 用户ID
+    - **vector**: 长期向量 (128维)
+    """
+    try:
+        user_id = request.get("user_id")
+        vector = request.get("vector")
+        
+        if not user_id or not vector:
+            raise HTTPException(status_code=400, detail="Missing user_id or vector")
+        
+        if len(vector) != 128:
+            raise HTTPException(status_code=400, detail="Vector dimension must be 128")
+        
+        success = milvus_service.update_user_long_term_vector(user_id, vector)
+        
+        if success:
+            return {"success": True, "message": "User long-term vector updated"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update vector")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating user long-term vector: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/user/vector")
+async def insert_user_vector(request: dict):
+    """
+    插入用户向量（到 Milvus）
+    
+    - **user_id**: 用户ID
+    - **long_term_vec**: 长期向量 (128维)
+    - **interest_vec**: 初始兴趣向量 (128维)
+    """
+    try:
+        user_id = request.get("user_id")
+        long_term_vec = request.get("long_term_vec")
+        interest_vec = request.get("interest_vec")
+        
+        if not user_id or not long_term_vec or not interest_vec:
+            raise HTTPException(status_code=400, detail="Missing required fields")
+        
+        if len(long_term_vec) != 128 or len(interest_vec) != 128:
+            raise HTTPException(status_code=400, detail="Vector dimension must be 128")
+        
+        success = milvus_service.insert_user_vector(user_id, long_term_vec, interest_vec)
+        
+        if success:
+            return {"success": True, "message": "User vector inserted"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to insert vector")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inserting user vector: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/recall/vector")
+async def vector_recall(request: dict):
+    """
+    向量召回 - 根据用户向量搜索相似视频
+    
+    - **user_id**: 用户ID
+    - **user_vector**: 用户向量 (128维)
+    - **top_k**: 返回Top K
+    """
+    try:
+        user_id = request.get("user_id")
+        user_vector = request.get("user_vector")
+        top_k = request.get("top_k", 100)
+        
+        if not user_id or not user_vector:
+            raise HTTPException(status_code=400, detail="Missing user_id or user_vector")
+        
+        if len(user_vector) != 128:
+            raise HTTPException(status_code=400, detail="Vector dimension must be 128")
+        
+        videos = milvus_service.search_similar_videos(user_vector, top_k)
+        
+        video_ids = [v["video_id"] for v in videos]
+        
+        return {
+            "user_id": user_id,
+            "video_ids": video_ids,
+            "count": len(video_ids)
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error performing vector recall: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 

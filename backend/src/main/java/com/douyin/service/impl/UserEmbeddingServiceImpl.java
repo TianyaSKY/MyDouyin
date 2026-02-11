@@ -81,11 +81,18 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
     @Override
     public List<Double> getUserLongTermVector(Long userId) {
         try {
-            UserProfile user = userProfileService.getById(userId);
-            if (user != null && user.getLongVec() != null && !user.getLongVec().isEmpty()) {
-                return user.getLongVec();
+            // 从 Milvus 获取长期向量（通过 FastAPI 服务）
+            List<Float> longTermVec = recommendServiceClient.getUserLongTermVector(userId);
+            
+            if (longTermVec != null && longTermVec.size() == VECTOR_DIM) {
+                return longTermVec.stream()
+                    .map(Float::doubleValue)
+                    .collect(Collectors.toList());
             }
+            
+            log.debug("Long-term vector not found for user: {}", userId);
             return new ArrayList<>();
+            
         } catch (Exception e) {
             log.error("Error getting long-term vector for user: {}", userId, e);
             return new ArrayList<>();
@@ -185,16 +192,26 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
                 return;
             }
 
+            // 检查用户是否存在
             UserProfile user = userProfileService.getById(userId);
             if (user == null) {
                 log.warn("User not found: {}", userId);
                 return;
             }
 
-            user.setLongVec(vector);
-            userProfileService.updateById(user);
+            // 转换为 Float 列表
+            List<Float> floatVector = vector.stream()
+                .map(Double::floatValue)
+                .collect(Collectors.toList());
 
-            log.info("Updated long-term vector for user: {}", userId);
+            // 更新到 Milvus（通过 FastAPI 服务）
+            boolean success = recommendServiceClient.updateUserLongTermVector(userId, floatVector);
+            
+            if (success) {
+                log.info("Updated long-term vector for user: {} in Milvus", userId);
+            } else {
+                log.warn("Failed to update long-term vector for user: {}", userId);
+            }
 
         } catch (Exception e) {
             log.error("Error updating long-term vector for user: {}", userId, e);

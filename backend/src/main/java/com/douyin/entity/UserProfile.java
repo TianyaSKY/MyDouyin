@@ -34,17 +34,9 @@ public class UserProfile {
     private String avatarUrl;
 
     /**
-     * User interest vector for long-term recall (stored as JSON array).
+     * 用户向量已迁移到 Milvus，不再存储在 MySQL
+     * 使用 RecommendServiceClient 调用 FastAPI 获取用户向量
      */
-    @TableField(typeHandler = JacksonTypeHandler.class)
-    private List<Double> longVec;
-
-    /**
-     * User interest tags with weights (stored as JSON object).
-     * Example: {"科技": 0.8, "美食": 0.6, "旅游": 0.4}
-     */
-    @TableField(typeHandler = JacksonTypeHandler.class)
-    private java.util.Map<String, Double> interestTags;
 
     private LocalDateTime createdAt;
 

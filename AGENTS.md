@@ -70,7 +70,7 @@
 4.  **精排 (Fine Rank - 可选):** 调用 FastAPI `/api/rank` (Wide & Deep)。
 
 ### 关键数据模型 (MySQL)
-- `user_profile`: `interest_tags` (JSON), `long_vec` (JSON)。
+- `user_profile`: 用户向量已迁移到 Milvus，不再存储在 MySQL。
 - `video`: `tags` (JSON)。
 - `user_event`: 用户行为日志 (点赞、完播、分享等)。
 

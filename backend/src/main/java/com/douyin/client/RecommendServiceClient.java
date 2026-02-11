@@ -166,6 +166,132 @@ public class RecommendServiceClient {
     }
 
     /**
+     * 获取用户长期向量（从 Milvus）
+     */
+    public List<Float> getUserLongTermVector(Long userId) {
+        try {
+            String url = recommendServiceUrl + "/api/user/vector/long-term/" + userId;
+            
+            ResponseEntity<UserVectorResponse> response = restTemplate.getForEntity(
+                url, UserVectorResponse.class
+            );
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                log.info("Retrieved long-term vector for user {}", userId);
+                return response.getBody().getVector();
+            }
+            
+            log.debug("Long-term vector not found for user {}", userId);
+            return null;
+            
+        } catch (Exception e) {
+            log.error("Error getting long-term vector for user {}", userId, e);
+            return null;
+        }
+    }
+
+    /**
+     * 更新用户长期向量（到 Milvus）
+     */
+    public boolean updateUserLongTermVector(Long userId, List<Float> vector) {
+        try {
+            String url = recommendServiceUrl + "/api/user/vector/long-term";
+            
+            Map<String, Object> request = new HashMap<>();
+            request.put("user_id", userId);
+            request.put("vector", vector);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+            
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                url, entity, Map.class
+            );
+            
+            if (response.getStatusCode() == HttpStatus.OK) {
+                log.info("Updated long-term vector for user {}", userId);
+                return true;
+            }
+            
+            log.warn("Failed to update long-term vector for user {}", userId);
+            return false;
+            
+        } catch (Exception e) {
+            log.error("Error updating long-term vector for user {}", userId, e);
+            return false;
+        }
+    }
+
+    /**
+     * 插入用户向量（到 Milvus）
+     */
+    public boolean insertUserVector(Long userId, List<Float> longTermVec, List<Float> interestVec) {
+        try {
+            String url = recommendServiceUrl + "/api/user/vector";
+            
+            Map<String, Object> request = new HashMap<>();
+            request.put("user_id", userId);
+            request.put("long_term_vec", longTermVec);
+            request.put("interest_vec", interestVec);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+            
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                url, entity, Map.class
+            );
+            
+            if (response.getStatusCode() == HttpStatus.OK) {
+                log.info("Inserted user vector for user {}", userId);
+                return true;
+            }
+            
+            log.warn("Failed to insert user vector for user {}", userId);
+            return false;
+            
+        } catch (Exception e) {
+            log.error("Error inserting user vector for user {}", userId, e);
+            return false;
+        }
+    }
+
+    /**
+     * 向量召回
+     */
+    public List<Long> vectorRecall(Long userId, List<Float> userVector, int topK) {
+        try {
+            String url = recommendServiceUrl + "/api/recall/vector";
+            
+            Map<String, Object> request = new HashMap<>();
+            request.put("user_id", userId);
+            request.put("user_vector", userVector);
+            request.put("top_k", topK);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+            
+            ResponseEntity<VectorRecallResponse> response = restTemplate.postForEntity(
+                url, entity, VectorRecallResponse.class
+            );
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                log.info("Vector recall found {} videos for user {}", response.getBody().getVideoIds().size(), userId);
+                return response.getBody().getVideoIds();
+            }
+            
+            log.warn("Failed to perform vector recall for user {}", userId);
+            return null;
+            
+        } catch (Exception e) {
+            log.error("Error performing vector recall for user {}", userId, e);
+            return null;
+        }
+    }
+
+    /**
      * 健康检查
      */
     public boolean healthCheck() {
@@ -215,6 +341,21 @@ public class RecommendServiceClient {
         private Double rankScore;
         private Double recallScore;
         private Double hotScore;
+    }
+
+    @Data
+    public static class UserVectorResponse {
+        private Long userId;
+        private List<Float> vector;
+        private Integer dimension;
+        private Long updatedAt;
+    }
+
+    @Data
+    public static class VectorRecallResponse {
+        private Long userId;
+        private List<Long> videoIds;
+        private Integer count;
     }
 }
 
