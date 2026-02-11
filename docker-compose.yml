@@ -13,7 +13,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./sql/schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./scripts/schema.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - douyin-net
 

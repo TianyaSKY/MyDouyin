@@ -338,7 +338,7 @@ assert np.mean(similarities) > 0.3
 
 ## 相关文件
 
-- **数据库**: `sql/schema.sql`
+- **数据库**: `scripts/schema.sql`
 - **初始化脚本**: `scripts/init_milvus.py`
 - **Milvus 服务**: `recommend/app/services/milvus_service.py`
 - **用户向量服务**: `recommend/app/services/user_service.py`

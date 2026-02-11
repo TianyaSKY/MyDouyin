@@ -79,7 +79,7 @@
 - **路径处理:** 文件操作**始终**使用绝对路径。
 - **修改:**
   - 如果修改 FastAPI 接口，**必须**更新 Java `RecommendServiceClient`。
-  - 如果修改数据库 Schema (`schema.sql`)，需创建迁移计划。
+  - 如果修改数据库 Schema (`scripts/schema.sql`)，需创建迁移计划。
 - **测试:** 逻辑修改后**始终**运行测试。
   - Java: `mvn test`
   - Python: `pytest`
