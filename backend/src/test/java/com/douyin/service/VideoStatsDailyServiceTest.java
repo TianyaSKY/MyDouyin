@@ -1,6 +1,6 @@
 package com.douyin.service;
 
-import com.douyin.enums.EventType;
+import com.douyin.entity.enums.EventType;
 import com.douyin.mapper.VideoStatsDailyMapper;
 import com.douyin.service.impl.VideoStatsDailyServiceImpl;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,14 +1,14 @@
 package com.douyin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.douyin.config.RabbitMQConfig;
-import com.douyin.dto.FeedResponse;
-import com.douyin.dto.RecallCandidate;
+import com.douyin.common.config.RabbitMQConfig;
+import com.douyin.entity.dto.FeedResponse;
+import com.douyin.entity.dto.RecallCandidate;
 import com.douyin.entity.UserEvent;
 import com.douyin.entity.Video;
 import com.douyin.entity.VideoStatsDaily;
-import com.douyin.enums.EventType;
-import com.douyin.enums.VideoStatus;
+import com.douyin.entity.enums.EventType;
+import com.douyin.entity.enums.VideoStatus;
 import com.douyin.service.IFeedService;
 import com.douyin.service.IMilvusService;
 import com.douyin.service.UserEmbeddingService;

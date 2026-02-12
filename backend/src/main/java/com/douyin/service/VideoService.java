@@ -3,7 +3,7 @@ package com.douyin.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.douyin.entity.Video;
-import com.douyin.enums.VideoStatus;
+import com.douyin.entity.enums.VideoStatus;
 
 public interface VideoService extends IService<Video> {
 

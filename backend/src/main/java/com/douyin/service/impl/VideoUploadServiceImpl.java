@@ -1,9 +1,9 @@
 package com.douyin.service.impl;
 
-import com.douyin.dto.UploadCompleteRequest;
-import com.douyin.dto.UploadCompleteResponse;
-import com.douyin.dto.UploadInitRequest;
-import com.douyin.dto.UploadInitResponse;
+import com.douyin.entity.dto.UploadCompleteRequest;
+import com.douyin.entity.dto.UploadCompleteResponse;
+import com.douyin.entity.dto.UploadInitRequest;
+import com.douyin.entity.dto.UploadInitResponse;
 import com.douyin.entity.FileAsset;
 import com.douyin.service.FileAssetService;
 import com.douyin.service.VideoUploadService;

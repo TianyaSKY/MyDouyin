@@ -1,4 +1,4 @@
-package com.douyin.dto;
+package com.douyin.entity.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

@@ -1,8 +1,8 @@
-package com.douyin.mq;
+package com.douyin.client;
 
-import com.douyin.config.RabbitMQConfig;
+import com.douyin.common.config.RabbitMQConfig;
 import com.douyin.entity.UserEvent;
-import com.douyin.enums.EventType;
+import com.douyin.entity.enums.EventType;
 import com.douyin.service.UserEmbeddingService;
 import com.douyin.service.UserEventService;
 import com.douyin.service.VideoStatsDailyService;

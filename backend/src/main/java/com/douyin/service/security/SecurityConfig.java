@@ -1,4 +1,4 @@
-package com.douyin.security;
+package com.douyin.service.security;
 
 import com.douyin.common.Result;
 import com.fasterxml.jackson.databind.ObjectMapper;

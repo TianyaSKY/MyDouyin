@@ -3,7 +3,7 @@ package com.douyin.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.douyin.entity.Video;
 import com.douyin.entity.VideoStatsDaily;
-import com.douyin.enums.VideoStatus;
+import com.douyin.entity.enums.VideoStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;

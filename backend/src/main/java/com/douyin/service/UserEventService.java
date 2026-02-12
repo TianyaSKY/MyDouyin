@@ -3,7 +3,7 @@ package com.douyin.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.douyin.entity.UserEvent;
-import com.douyin.enums.EventType;
+import com.douyin.entity.enums.EventType;
 
 import java.util.List;
 

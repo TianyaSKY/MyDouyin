@@ -1,4 +1,4 @@
-package com.douyin.config;
+package com.douyin.common.config;
 
 import io.milvus.client.MilvusServiceClient;
 import io.milvus.param.ConnectParam;

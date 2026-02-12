@@ -2,12 +2,12 @@ package com.douyin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.douyin.common.Result;
-import com.douyin.dto.UploadCompleteRequest;
-import com.douyin.dto.UploadCompleteResponse;
-import com.douyin.dto.UploadInitRequest;
-import com.douyin.dto.UploadInitResponse;
+import com.douyin.entity.dto.UploadCompleteRequest;
+import com.douyin.entity.dto.UploadCompleteResponse;
+import com.douyin.entity.dto.UploadInitRequest;
+import com.douyin.entity.dto.UploadInitResponse;
 import com.douyin.entity.Video;
-import com.douyin.enums.VideoStatus;
+import com.douyin.entity.enums.VideoStatus;
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoUploadService;
 import jakarta.validation.Valid;

@@ -1,4 +1,4 @@
-package com.douyin.security;
+package com.douyin.service.security;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

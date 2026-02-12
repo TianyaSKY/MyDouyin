@@ -3,13 +3,13 @@ package com.douyin.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.douyin.common.Result;
 import com.douyin.entity.UserEvent;
-import com.douyin.enums.EventType;
+import com.douyin.entity.enums.EventType;
 import com.douyin.service.UserEventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import com.douyin.config.RabbitMQConfig;
+import com.douyin.common.config.RabbitMQConfig;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 import java.util.List;

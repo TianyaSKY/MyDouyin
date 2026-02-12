@@ -4,8 +4,8 @@ import com.douyin.entity.UserEvent;
 import com.douyin.entity.UserProfile;
 import com.douyin.entity.Video;
 import com.douyin.entity.VideoStatsDaily;
-import com.douyin.enums.EventType;
-import com.douyin.enums.VideoStatus;
+import com.douyin.entity.enums.EventType;
+import com.douyin.entity.enums.VideoStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

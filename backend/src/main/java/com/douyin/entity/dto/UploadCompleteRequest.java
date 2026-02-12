@@ -1,4 +1,4 @@
-package com.douyin.dto;
+package com.douyin.entity.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -6,7 +6,10 @@ import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 @Data
-public class UploadInitRequest {
+public class UploadCompleteRequest {
+
+    @NotBlank(message = "uploadId cannot be blank")
+    private String uploadId;
 
     @NotBlank(message = "fileName cannot be blank")
     private String fileName;
@@ -17,10 +20,6 @@ public class UploadInitRequest {
     @NotNull(message = "fileSize cannot be null")
     @Positive(message = "fileSize must be positive")
     private Long fileSize;
-
-    @NotNull(message = "chunkSize cannot be null")
-    @Positive(message = "chunkSize must be positive")
-    private Integer chunkSize;
 
     @NotNull(message = "totalChunks cannot be null")
     @Positive(message = "totalChunks must be positive")

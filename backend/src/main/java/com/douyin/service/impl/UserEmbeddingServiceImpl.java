@@ -5,7 +5,7 @@ import com.douyin.client.RecommendServiceClient;
 import com.douyin.entity.UserEvent;
 import com.douyin.entity.UserProfile;
 import com.douyin.entity.Video;
-import com.douyin.enums.EventType;
+import com.douyin.entity.enums.EventType;
 import com.douyin.service.UserEmbeddingService;
 import com.douyin.service.UserEventService;
 import com.douyin.service.UserProfileService;
@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;

@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
-import com.douyin.enums.EventType;
+import com.douyin.entity.enums.EventType;
 import lombok.Data;
 
 import java.time.LocalDateTime;

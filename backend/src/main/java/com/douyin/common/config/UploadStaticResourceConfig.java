@@ -1,4 +1,4 @@
-package com.douyin.config;
+package com.douyin.common.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

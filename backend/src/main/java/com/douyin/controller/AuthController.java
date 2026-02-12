@@ -1,10 +1,10 @@
 package com.douyin.controller;
 
 import com.douyin.common.Result;
-import com.douyin.dto.LoginRequest;
-import com.douyin.dto.RegisterRequest;
-import com.douyin.dto.TokenResponse;
-import com.douyin.security.JwtUserDetails;
+import com.douyin.entity.dto.LoginRequest;
+import com.douyin.entity.dto.RegisterRequest;
+import com.douyin.entity.dto.TokenResponse;
+import com.douyin.service.security.JwtUserDetails;
 import com.douyin.service.UserProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

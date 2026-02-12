@@ -1,7 +1,7 @@
 package com.douyin.controller;
 
 import com.douyin.common.Result;
-import com.douyin.dto.FeedResponse;
+import com.douyin.entity.dto.FeedResponse;
 import com.douyin.service.IFeedService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

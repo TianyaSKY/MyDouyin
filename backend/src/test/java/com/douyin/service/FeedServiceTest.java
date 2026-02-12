@@ -1,11 +1,11 @@
 package com.douyin.service;
 
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
-import com.douyin.config.RabbitMQConfig;
-import com.douyin.dto.FeedResponse;
+import com.douyin.common.config.RabbitMQConfig;
+import com.douyin.entity.dto.FeedResponse;
 import com.douyin.entity.Video;
 import com.douyin.entity.VideoStatsDaily;
-import com.douyin.enums.VideoStatus;
+import com.douyin.entity.enums.VideoStatus;
 import com.douyin.service.impl.FeedServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

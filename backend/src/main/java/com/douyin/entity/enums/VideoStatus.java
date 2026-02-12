@@ -1,4 +1,4 @@
-package com.douyin.enums;
+package com.douyin.entity.enums;
 
 import com.baomidou.mybatisplus.annotation.EnumValue;
 import lombok.Getter;

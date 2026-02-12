@@ -1,13 +1,11 @@
 package com.douyin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.douyin.entity.VideoStatsDaily;
-import com.douyin.enums.EventType;
+import com.douyin.entity.enums.EventType;
 import com.douyin.mapper.VideoStatsDailyMapper;
 import com.douyin.service.VideoStatsDailyService;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;

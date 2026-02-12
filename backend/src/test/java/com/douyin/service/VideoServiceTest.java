@@ -1,10 +1,9 @@
 package com.douyin.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.douyin.entity.Video;
-import com.douyin.enums.VideoStatus;
+import com.douyin.entity.enums.VideoStatus;
 import com.douyin.mapper.VideoMapper;
 import com.douyin.service.impl.VideoServiceImpl;
 import org.junit.jupiter.api.BeforeEach;

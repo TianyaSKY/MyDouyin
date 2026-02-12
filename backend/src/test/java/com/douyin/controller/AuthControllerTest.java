@@ -1,11 +1,11 @@
 package com.douyin.controller;
 
-import com.douyin.dto.LoginRequest;
-import com.douyin.dto.RegisterRequest;
-import com.douyin.dto.TokenResponse;
+import com.douyin.entity.dto.LoginRequest;
+import com.douyin.entity.dto.RegisterRequest;
+import com.douyin.entity.dto.TokenResponse;
 import com.douyin.entity.UserProfile;
-import com.douyin.security.JwtAuthenticationFilter;
-import com.douyin.security.SecurityConfig;
+import com.douyin.service.security.JwtAuthenticationFilter;
+import com.douyin.service.security.SecurityConfig;
 import com.douyin.service.UserProfileService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;

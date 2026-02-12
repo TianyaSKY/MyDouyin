@@ -1,4 +1,4 @@
-package com.douyin.security;
+package com.douyin.service.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

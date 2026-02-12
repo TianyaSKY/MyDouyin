@@ -1,4 +1,4 @@
-package com.douyin.dto;
+package com.douyin.entity.dto;
 
 import com.douyin.entity.Video;
 import lombok.AllArgsConstructor;

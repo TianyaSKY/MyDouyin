@@ -1,5 +1,6 @@
 package com.douyin.security;
 
+import com.douyin.service.security.JwtUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

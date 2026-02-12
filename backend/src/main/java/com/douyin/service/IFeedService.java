@@ -1,6 +1,6 @@
 package com.douyin.service;
 
-import com.douyin.dto.FeedResponse;
+import com.douyin.entity.dto.FeedResponse;
 
 /**
  * Feed 推荐服务接口

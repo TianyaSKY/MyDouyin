@@ -1,8 +1,7 @@
 package com.douyin.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.douyin.entity.UserEvent;
-import com.douyin.enums.EventType;
+import com.douyin.entity.enums.EventType;
 import com.douyin.mapper.UserEventMapper;
 import com.douyin.service.impl.UserEventServiceImpl;
 import org.junit.jupiter.api.BeforeEach;

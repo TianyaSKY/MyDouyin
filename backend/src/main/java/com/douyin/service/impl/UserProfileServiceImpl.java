@@ -2,12 +2,12 @@ package com.douyin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.douyin.dto.LoginRequest;
-import com.douyin.dto.RegisterRequest;
-import com.douyin.dto.TokenResponse;
+import com.douyin.entity.dto.LoginRequest;
+import com.douyin.entity.dto.RegisterRequest;
+import com.douyin.entity.dto.TokenResponse;
 import com.douyin.entity.UserProfile;
 import com.douyin.mapper.UserProfileMapper;
-import com.douyin.security.JwtUtils;
+import com.douyin.service.security.JwtUtils;
 import com.douyin.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;

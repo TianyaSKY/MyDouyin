@@ -1,4 +1,4 @@
-package com.douyin.config;
+package com.douyin.common.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;

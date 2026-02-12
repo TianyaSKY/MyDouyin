@@ -1,9 +1,9 @@
 package com.douyin.service;
 
-import com.douyin.dto.UploadCompleteRequest;
-import com.douyin.dto.UploadCompleteResponse;
-import com.douyin.dto.UploadInitRequest;
-import com.douyin.dto.UploadInitResponse;
+import com.douyin.entity.dto.UploadCompleteRequest;
+import com.douyin.entity.dto.UploadCompleteResponse;
+import com.douyin.entity.dto.UploadInitRequest;
+import com.douyin.entity.dto.UploadInitResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface VideoUploadService {

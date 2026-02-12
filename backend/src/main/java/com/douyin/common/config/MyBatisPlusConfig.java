@@ -1,4 +1,4 @@
-package com.douyin.config;
+package com.douyin.common.config;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;

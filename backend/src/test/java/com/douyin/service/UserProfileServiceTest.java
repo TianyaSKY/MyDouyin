@@ -1,11 +1,11 @@
 package com.douyin.service;
 
-import com.douyin.dto.LoginRequest;
-import com.douyin.dto.RegisterRequest;
-import com.douyin.dto.TokenResponse;
+import com.douyin.entity.dto.LoginRequest;
+import com.douyin.entity.dto.RegisterRequest;
+import com.douyin.entity.dto.TokenResponse;
 import com.douyin.entity.UserProfile;
 import com.douyin.mapper.UserProfileMapper;
-import com.douyin.security.JwtUtils;
+import com.douyin.service.security.JwtUtils;
 import com.douyin.service.impl.UserProfileServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
