@@ -17,15 +17,15 @@ public class VideoStatsDaily {
 
     private LocalDate date;
 
-    private Integer imprCnt;
+    private Long imprCnt;
 
-    private Integer clickCnt;
+    private Long clickCnt;
 
-    private Integer likeCnt;
+    private Long likeCnt;
 
-    private Integer finishCnt;
+    private Long finishCnt;
 
-    private Integer shareCnt;
+    private Long shareCnt;
 
     /**
      * Total watch time in milliseconds.

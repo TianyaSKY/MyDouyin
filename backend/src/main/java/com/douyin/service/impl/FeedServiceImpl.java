@@ -12,7 +12,6 @@ import com.douyin.enums.VideoStatus;
 import com.douyin.service.IFeedService;
 import com.douyin.service.IMilvusService;
 import com.douyin.service.UserEmbeddingService;
-// import com.douyin.service.UserTagService; // 已废弃，改用向量召回
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoStatsDailyService;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +33,6 @@ public class FeedServiceImpl implements IFeedService {
     private final VideoService videoService;
     private final VideoStatsDailyService videoStatsDailyService;
     private final IMilvusService milvusService;
-    // private final UserTagService userTagService; // 已废弃，改用向量召回
     private final UserEmbeddingService userEmbeddingService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RabbitTemplate rabbitTemplate;
@@ -74,7 +72,7 @@ public class FeedServiceImpl implements IFeedService {
     }
 
     /**
-     * 多路召回：热门池 + 向量召回（已移除标签召回）
+     * 多路召回：热门池 + 向量召回
      */
     private List<RecallCandidate> multiRecall(Long userId, int totalSize) {
         List<RecallCandidate> allCandidates = new ArrayList<>();
@@ -147,7 +145,6 @@ public class FeedServiceImpl implements IFeedService {
 
     /**
      * 路径2: 基于向量召回（Milvus）
-     * 已移除标签召回，改用向量召回
      */
     private List<RecallCandidate> recallByVector(Long userId, int size) {
         try {

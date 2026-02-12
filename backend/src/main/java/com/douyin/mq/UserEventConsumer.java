@@ -5,7 +5,6 @@ import com.douyin.entity.UserEvent;
 import com.douyin.enums.EventType;
 import com.douyin.service.UserEmbeddingService;
 import com.douyin.service.UserEventService;
-import com.douyin.service.UserTagService;
 import com.douyin.service.VideoStatsDailyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +18,6 @@ public class UserEventConsumer {
 
     private final UserEventService userEventService;
     private final VideoStatsDailyService videoStatsDailyService;
-    private final UserTagService userTagService;
     private final UserEmbeddingService userEmbeddingService;
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
@@ -43,14 +41,7 @@ public class UserEventConsumer {
                     event.getWatchMs() != null ? event.getWatchMs() : 0
             );
 
-            // 3. Update user interest tags (DEPRECATED - now using vectors)
-            // userTagService.updateUserTagsByEvent(
-            //     event.getUserId(),
-            //     event.getVideoId(),
-            //     event.getEventType()
-            // );
-
-            // 4. Update user realtime embedding vector
+            // 3. Update user realtime embedding vector
             if (shouldUpdateUserTags(event.getEventType())) {
                 userEmbeddingService.updateRealtimeVector(
                     event.getUserId(),

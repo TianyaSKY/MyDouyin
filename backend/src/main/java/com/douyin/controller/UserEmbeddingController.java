@@ -23,7 +23,7 @@ public class UserEmbeddingController {
     @GetMapping("/{userId}/realtime")
     public Result<List<Float>> getRealtimeVector(@PathVariable Long userId) {
         List<Float> vector = userEmbeddingService.getUserRealtimeVector(userId);
-        return Result.success(vector);
+        return Result.ok(vector);
     }
 
     /**
@@ -32,7 +32,7 @@ public class UserEmbeddingController {
     @GetMapping("/{userId}/longterm")
     public Result<List<Double>> getLongTermVector(@PathVariable Long userId) {
         List<Double> vector = userEmbeddingService.getUserLongTermVector(userId);
-        return Result.success(vector);
+        return Result.ok(vector);
     }
 
     /**
@@ -43,7 +43,7 @@ public class UserEmbeddingController {
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0.7") double shortTermWeight) {
         List<Float> vector = userEmbeddingService.getFusedVector(userId, shortTermWeight);
-        return Result.success(vector);
+        return Result.ok(vector);
     }
 
     /**
@@ -52,7 +52,7 @@ public class UserEmbeddingController {
     @PostMapping("/{userId}/calculate")
     public Result<List<Float>> calculateVector(@PathVariable Long userId) {
         List<Float> vector = userEmbeddingService.calculateRealtimeVector(userId);
-        return Result.success(vector);
+        return Result.ok(vector);
     }
 
     /**
@@ -63,7 +63,7 @@ public class UserEmbeddingController {
             @PathVariable Long userId,
             @RequestBody List<Double> vector) {
         userEmbeddingService.updateLongTermVector(userId, vector);
-        return Result.success("长期向量更新成功");
+        return Result.ok("长期向量更新成功");
     }
 }
 

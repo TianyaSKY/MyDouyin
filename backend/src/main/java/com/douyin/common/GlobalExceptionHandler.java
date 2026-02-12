@@ -43,6 +43,6 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleException(Exception ex) {
         log.error("Unexpected error", ex);
-        return Result.fail(500, "·şÎñÆ÷ÄÚ²¿´íÎó");
+        return Result.fail(500, "æœåŠ¡å™¨é”™è¯¯");
     }
 }

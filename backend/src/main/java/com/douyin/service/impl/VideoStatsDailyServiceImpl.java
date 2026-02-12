@@ -89,17 +89,17 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
             newStats.setVideoId(videoId);
             newStats.setDate(today);
             newStats.setWatchTimeSum((long) watchMs);
-            newStats.setImprCnt(0);
-            newStats.setClickCnt(0);
-            newStats.setLikeCnt(0);
-            newStats.setFinishCnt(0);
-            newStats.setShareCnt(0);
+            newStats.setImprCnt(0L);
+            newStats.setClickCnt(0L);
+            newStats.setLikeCnt(0L);
+            newStats.setFinishCnt(0L);
+            newStats.setShareCnt(0L);
 
-            if (eventType == EventType.IMPR) newStats.setImprCnt(1);
-            else if (eventType == EventType.CLICK) newStats.setClickCnt(1);
-            else if (eventType == EventType.LIKE) newStats.setLikeCnt(1);
-            else if (eventType == EventType.FINISH) newStats.setFinishCnt(1);
-            else if (eventType == EventType.SHARE) newStats.setShareCnt(1);
+            if (eventType == EventType.IMPR) newStats.setImprCnt(1L);
+            else if (eventType == EventType.CLICK) newStats.setClickCnt(1L);
+            else if (eventType == EventType.LIKE) newStats.setLikeCnt(1L);
+            else if (eventType == EventType.FINISH) newStats.setFinishCnt(1L);
+            else if (eventType == EventType.SHARE) newStats.setShareCnt(1L);
 
             try {
                 save(newStats);
