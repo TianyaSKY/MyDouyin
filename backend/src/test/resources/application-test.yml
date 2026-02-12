@@ -1,0 +1,42 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 1
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+jwt:
+  secret: test-secret-key-must-be-at-least-256-bits-long-for-HS256-algorithm
+  expiration: 3600000
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+milvus:
+  host: localhost
+  port: 19530
+  database: default
+
