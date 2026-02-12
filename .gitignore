@@ -45,3 +45,6 @@ backend/nul
 nul
 */nul
 */opencode
+
+node_modules/
+.npm-cache/
