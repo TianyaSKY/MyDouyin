@@ -1,4 +1,4 @@
-services:
+﻿services:
   # MySQL - Primary Database
   mysql:
     image: mysql:8.0
@@ -10,7 +10,7 @@ services:
       MYSQL_USER: douyin_user
       MYSQL_PASSWORD: douyin_password
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./scripts/schema.sql:/docker-entrypoint-initdb.d/init.sql
@@ -23,7 +23,7 @@ services:
     container_name: douyin-redis
     restart: always
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -39,8 +39,8 @@ services:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_AMQP_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -68,8 +68,8 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     ports:
-      - "9002:9000"
-      - "9003:9001"
+      - "${MILVUS_MINIO_API_PORT}:9000"
+      - "${MILVUS_MINIO_CONSOLE_PORT}:9001"
     volumes:
       - milvus_minio_data:/data
     command: minio server /data --console-address ":9001"
@@ -88,8 +88,8 @@ services:
     volumes:
       - milvus_data:/var/lib/milvus
     ports:
-      - "19530:19530"
-      - "9091:9091"
+      - "${MILVUS_PORT}:19530"
+      - "${MILVUS_METRICS_PORT}:9091"
     depends_on:
       - "etcd"
       - "minio-milvus"

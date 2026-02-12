@@ -50,6 +50,14 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/feed").permitAll()
                 .requestMatchers(HttpMethod.GET, "/uploads/videos/**").permitAll()
+                
+                // Swagger UI and OpenAPI docs
+                .requestMatchers(
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/swagger-resources/**",
+                    "/webjars/**"
+                ).permitAll()
 
                 // All other endpoints require authentication
                 .anyRequest().authenticated()

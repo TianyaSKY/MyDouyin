@@ -18,24 +18,24 @@ def init_milvus():
     print(f"Connecting to Milvus at {MILVUS_HOST}:{MILVUS_PORT}...")
     try:
         connections.connect("default", host=MILVUS_HOST, port=MILVUS_PORT)
-        print("✓ Connected to Milvus successfully")
+        print("Connected to Milvus successfully")
     except Exception as e:
-        print(f"✗ Failed to connect to Milvus: {e}")
+        print(f"Failed to connect to Milvus: {e}")
         return
 
     # 创建视频向量 Collection
     create_video_collection()
-    
+
     # 创建用户向量 Collection
     create_user_collection()
-    
-    print("\n✓ All collections initialized successfully!")
+
+    print("\nAll collections initialized successfully!")
 
 
 def create_video_collection():
     """创建视频向量 Collection"""
     collection_name = "video_embedding"
-    
+
     if utility.has_collection(collection_name):
         print(f"\n'{collection_name}' already exists, skipping...")
         return
@@ -48,51 +48,62 @@ def create_video_collection():
             name="video_id",
             dtype=DataType.INT64,
             is_primary=True,
-            description="视频ID (主键)",
+            description="Video ID",
         ),
         FieldSchema(
             name="embedding",
             dtype=DataType.FLOAT_VECTOR,
             dim=DIM,
-            description="视频向量 (128维)",
+            description="Video vector (128d)",
         ),
         FieldSchema(
             name="author_id",
             dtype=DataType.INT64,
-            description="作者ID",
+            description="Author ID",
         ),
         FieldSchema(
             name="created_ts",
             dtype=DataType.INT64,
-            description="创建时间戳 (毫秒)",
+            description="Created timestamp",
         ),
     ]
 
-    schema = CollectionSchema(fields=fields, description="视频向量存储")
+    schema = CollectionSchema(fields=fields, description="Video embedding storage")
 
     # Create Collection
     collection = Collection(name=collection_name, schema=schema)
-    print(f"  ✓ Collection '{collection_name}' created")
+    print(f"Collection '{collection_name}' created")
 
     # Create Index
-    print("  Creating index...")
+    print("Creating index...")
     index_params = {
-        "metric_type": "COSINE",  # 余弦相似度
-        "index_type": "HNSW",     # HNSW 索引，查询速度快
+        "metric_type": "COSINE",
+        "index_type": "HNSW",
         "params": {"M": 16, "efConstruction": 200},
     }
     collection.create_index(field_name="embedding", index_params=index_params)
-    print(f"  ✓ Index created: {index_params['index_type']} (metric: {index_params['metric_type']})")
+    print(
+        f"Index created: {index_params['index_type']} (metric: {index_params['metric_type']})"
+    )
 
     # Load collection
     collection.load()
-    print(f"  ✓ Collection loaded into memory")
+    print(f"Collection loaded into memory")
 
 
 def create_user_collection():
     """创建用户向量 Collection"""
-    collection_name = "user_vectors"
-    
+    # 拆分为两个 Collection，因为某些 Milvus 版本不支持多向量字段
+    create_single_user_vector_collection(
+        "user_long_term_vectors", "Long-term interest storage"
+    )
+    create_single_user_vector_collection(
+        "user_interest_vectors", "Initial interest storage"
+    )
+
+
+def create_single_user_vector_collection(collection_name, description):
+    """创建一个单向量的用户集合"""
     if utility.has_collection(collection_name):
         print(f"\n'{collection_name}' already exists, skipping...")
         return
@@ -105,56 +116,40 @@ def create_user_collection():
             name="user_id",
             dtype=DataType.INT64,
             is_primary=True,
-            description="用户ID (主键)",
+            description="User ID",
         ),
         FieldSchema(
-            name="long_term_vec",
+            name="vector",
             dtype=DataType.FLOAT_VECTOR,
             dim=DIM,
-            description="长期兴趣向量 (128维)",
-        ),
-        FieldSchema(
-            name="interest_vec",
-            dtype=DataType.FLOAT_VECTOR,
-            dim=DIM,
-            description="初始兴趣向量 (128维，基于注册标签)",
+            description="User vector (128d)",
         ),
         FieldSchema(
             name="updated_at",
             dtype=DataType.INT64,
-            description="更新时间戳 (毫秒)",
+            description="Updated timestamp",
         ),
     ]
 
-    schema = CollectionSchema(fields=fields, description="用户向量存储")
+    schema = CollectionSchema(fields=fields, description=description)
 
     # Create Collection
     collection = Collection(name=collection_name, schema=schema)
-    print(f"  ✓ Collection '{collection_name}' created")
+    print(f"Collection '{collection_name}' created")
 
-    # Create Index for long_term_vec
-    print("  Creating index on 'long_term_vec'...")
-    index_params_long = {
+    # Create Index
+    print(f"Creating index on 'vector' for {collection_name}...")
+    index_params = {
         "metric_type": "COSINE",
         "index_type": "IVF_FLAT",
         "params": {"nlist": 1024},
     }
-    collection.create_index(field_name="long_term_vec", index_params=index_params_long)
-    print(f"  ✓ Index created on 'long_term_vec'")
-
-    # Create Index for interest_vec
-    print("  Creating index on 'interest_vec'...")
-    index_params_interest = {
-        "metric_type": "COSINE",
-        "index_type": "IVF_FLAT",
-        "params": {"nlist": 1024},
-    }
-    collection.create_index(field_name="interest_vec", index_params=index_params_interest)
-    print(f"  ✓ Index created on 'interest_vec'")
+    collection.create_index(field_name="vector", index_params=index_params)
+    print(f"Index created on 'vector'")
 
     # Load collection
     collection.load()
-    print(f"  ✓ Collection loaded into memory")
+    print(f"Collection loaded into memory")
 
 
 if __name__ == "__main__":

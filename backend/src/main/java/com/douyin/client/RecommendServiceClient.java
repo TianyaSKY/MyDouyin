@@ -19,7 +19,7 @@ import java.util.Map;
 @Component
 public class RecommendServiceClient {
 
-    @Value("${recommend.service.url:http://localhost:8001}")
+    @Value("${recommend.service.url:http://localhost:18101}")
     private String recommendServiceUrl;
 
     private final RestTemplate restTemplate;

@@ -1,23 +1,23 @@
 server:
-  port: 8080
+  port: ${BACKEND_PORT:18081}
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/douyin?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
-    username: douyin_user
-    password: douyin_password
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:douyin}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
+    username: ${MYSQL_USER:douyin_user}
+    password: ${MYSQL_PASSWORD:douyin_password}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: user
-    password: password
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_AMQP_PORT:5672}
+    username: ${RABBITMQ_USER:user}
+    password: ${RABBITMQ_PASSWORD:password}
 
   servlet:
     multipart:
@@ -51,12 +51,12 @@ app:
 
 # Milvus Configuration
 milvus:
-  host: localhost
-  port: 19530
+  host: ${MILVUS_HOST:localhost}
+  port: ${MILVUS_PORT:19530}
 
 # Recommend Service Configuration (FastAPI)
 recommend:
   service:
-    url: http://localhost:8001
-    timeout: 5000
-    retry: 3
+    url: ${RECOMMEND_SERVICE_URL:http://localhost:18101}
+    timeout: ${RECOMMEND_SERVICE_TIMEOUT:5000}
+    retry: ${RECOMMEND_SERVICE_RETRY:3}

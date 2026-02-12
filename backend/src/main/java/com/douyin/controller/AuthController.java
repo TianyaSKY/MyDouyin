@@ -43,10 +43,9 @@ public class AuthController {
     @GetMapping("/me")
     public Result<Object> me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof JwtUserDetails)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof JwtUserDetails userDetails)) {
             return Result.fail(401, "未登录");
         }
-        JwtUserDetails userDetails = (JwtUserDetails) authentication.getPrincipal();
         return Result.ok(userProfileService.getById(userDetails.getUserId()));
     }
 }

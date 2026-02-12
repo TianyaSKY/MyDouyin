@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     
     # 服务配置
     HOST: str = "0.0.0.0"
-    PORT: int = 8001
+    PORT: int = 18101
     
     # 模型配置
     MODEL_PATH: str = "./models"
