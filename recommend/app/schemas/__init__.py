@@ -7,6 +7,9 @@ from .recommend import (
     UserEmbeddingResponse,
     RankRequest,
     RankResponse,
+    UpdateUserLongTermVectorRequest,
+    InsertUserVectorRequest,
+    VectorRecallRequest,
     HealthResponse,
 )
 
@@ -19,6 +22,9 @@ __all__ = [
     "UserEmbeddingResponse",
     "RankRequest",
     "RankResponse",
+    "UpdateUserLongTermVectorRequest",
+    "InsertUserVectorRequest",
+    "VectorRecallRequest",
     "HealthResponse",
 ]
 

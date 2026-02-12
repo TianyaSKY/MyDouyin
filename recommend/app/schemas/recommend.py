@@ -70,6 +70,26 @@ class RankRequest(BaseModel):
     top_k: int = Field(20, description="返回Top K")
 
 
+class UpdateUserLongTermVectorRequest(BaseModel):
+    """更新用户长期向量请求"""
+    user_id: int = Field(..., description="用户ID")
+    vector: List[float] = Field(..., description="长期向量 (128维)")
+
+
+class InsertUserVectorRequest(BaseModel):
+    """插入用户向量请求"""
+    user_id: int = Field(..., description="用户ID")
+    long_term_vec: List[float] = Field(..., description="长期向量 (128维)")
+    interest_vec: List[float] = Field(..., description="兴趣向量 (128维)")
+
+
+class VectorRecallRequest(BaseModel):
+    """向量召回请求"""
+    user_id: int = Field(..., description="用户ID")
+    user_vector: List[float] = Field(..., description="用户向量 (128维)")
+    top_k: int = Field(100, description="返回Top K")
+
+
 class RankedVideo(BaseModel):
     """排序后的视频"""
     video_id: int
