@@ -13,6 +13,27 @@ import java.util.List;
 public interface VideoStatsDailyMapper extends BaseMapper<VideoStatsDaily> {
 
     /**
+     * Atomic Upsert (MySQL Specific)
+     */
+    @Select("INSERT INTO video_stats_daily (video_id, date, impr_cnt, click_cnt, like_cnt, finish_cnt, share_cnt, watch_time_sum) " +
+            "VALUES (#{videoId}, #{date}, #{impr}, #{click}, #{like}, #{finish}, #{share}, #{watchMs}) " +
+            "ON DUPLICATE KEY UPDATE " +
+            "impr_cnt = impr_cnt + #{impr}, " +
+            "click_cnt = click_cnt + #{click}, " +
+            "like_cnt = like_cnt + #{like}, " +
+            "finish_cnt = finish_cnt + #{finish}, " +
+            "share_cnt = share_cnt + #{share}, " +
+            "watch_time_sum = watch_time_sum + #{watchMs}")
+    void upsertStats(@Param("videoId") Long videoId,
+                     @Param("date") LocalDate date,
+                     @Param("impr") long impr,
+                     @Param("click") long click,
+                     @Param("like") long like,
+                     @Param("finish") long finish,
+                     @Param("share") long share,
+                     @Param("watchMs") long watchMs);
+
+    /**
      * Query stats for a specific video within a date range.
      */
     @Select("SELECT * FROM video_stats_daily WHERE video_id = #{videoId} AND date BETWEEN #{startDate} AND #{endDate} ORDER BY date")

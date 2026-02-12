@@ -23,6 +23,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -36,6 +39,9 @@ public class FeedServiceImpl implements IFeedService {
     private final UserEmbeddingService userEmbeddingService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RabbitTemplate rabbitTemplate;
+
+    // Thread pool for parallel recall
+    private final ExecutorService recallExecutor = Executors.newFixedThreadPool(10);
 
     private static final String HOT_VIDEO_KEY = "video:hot";
     private static final String USER_SEEN_KEY_PREFIX = "user:seen:";
@@ -72,22 +78,48 @@ public class FeedServiceImpl implements IFeedService {
     }
 
     /**
-     * 多路召回：热门池 + 向量召回
+     * 多路召回：热门池 + 向量召回 (并行执行)
      */
     private List<RecallCandidate> multiRecall(Long userId, int totalSize) {
         List<RecallCandidate> allCandidates = new ArrayList<>();
 
         // 路径1: 热门池召回（40%）
         int hotSize = totalSize * 2 / 5;
-        List<RecallCandidate> hotCandidates = recallFromHot(hotSize);
-        allCandidates.addAll(hotCandidates);
-        log.info("Hot recall: {} videos", hotCandidates.size());
+        CompletableFuture<List<RecallCandidate>> hotFuture = CompletableFuture.supplyAsync(
+            () -> recallFromHot(hotSize), recallExecutor)
+            .exceptionally(e -> {
+                log.error("Hot recall failed", e);
+                return new ArrayList<>();
+            });
 
         // 路径2: 向量召回（60%，主要召回路径）
         int vectorSize = totalSize * 3 / 5;
-        List<RecallCandidate> vectorCandidates = recallByVector(userId, vectorSize);
-        allCandidates.addAll(vectorCandidates);
-        log.info("Vector recall: {} videos", vectorCandidates.size());
+        CompletableFuture<List<RecallCandidate>> vectorFuture = CompletableFuture.supplyAsync(
+            () -> recallByVector(userId, vectorSize), recallExecutor)
+            .exceptionally(e -> {
+                log.error("Vector recall failed", e);
+                return new ArrayList<>();
+            });
+
+        try {
+            // 等待所有任务完成 (因为有 exceptionally 处理，join 不会抛出异常)
+            CompletableFuture.allOf(hotFuture, vectorFuture).join();
+            
+            List<RecallCandidate> hotCandidates = hotFuture.get();
+            List<RecallCandidate> vectorCandidates = vectorFuture.get();
+
+            if (hotCandidates != null) allCandidates.addAll(hotCandidates);
+            if (vectorCandidates != null) allCandidates.addAll(vectorCandidates);
+            
+            log.info("Parallel recall finished. Hot: {}, Vector: {}", 
+                hotCandidates != null ? hotCandidates.size() : 0, 
+                vectorCandidates != null ? vectorCandidates.size() : 0);
+
+        } catch (Exception e) {
+            log.error("Unexpected error during parallel recall aggregation", e);
+            // 极端情况下的兜底
+            return new ArrayList<>(); 
+        }
 
         // 去重（同一视频可能被多路召回）
         Map<Long, RecallCandidate> uniqueMap = new LinkedHashMap<>();
@@ -112,7 +144,7 @@ public class FeedServiceImpl implements IFeedService {
      */
     private List<RecallCandidate> recallFromHot(int size) {
         try {
-            Set<ZSetOperations.TypedTuple<Object>> hotVideos = 
+            Set<ZSetOperations.TypedTuple<Object>> hotVideos =
                 redisTemplate.opsForZSet().reverseRangeWithScores(HOT_VIDEO_KEY, 0, size - 1);
 
             if (hotVideos == null || hotVideos.isEmpty()) {

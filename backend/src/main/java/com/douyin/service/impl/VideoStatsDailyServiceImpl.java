@@ -41,72 +41,12 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
     public void incrementStats(Long videoId, EventType eventType, int watchMs) {
         LocalDate today = LocalDate.now();
 
-        // 1. Try to update first (optimistic)
-        LambdaUpdateWrapper<VideoStatsDaily> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(VideoStatsDaily::getVideoId, videoId)
-                .eq(VideoStatsDaily::getDate, today);
+        long impr = eventType == EventType.IMPR ? 1 : 0;
+        long click = eventType == EventType.CLICK ? 1 : 0;
+        long like = eventType == EventType.LIKE ? 1 : 0;
+        long finish = eventType == EventType.FINISH ? 1 : 0;
+        long share = eventType == EventType.SHARE ? 1 : 0;
 
-        // Build dynamic SQL
-        StringBuilder sql = new StringBuilder();
-        boolean hasUpdate = false;
-
-        if (eventType == EventType.IMPR) {
-            sql.append("impr_cnt = impr_cnt + 1");
-            hasUpdate = true;
-        } else if (eventType == EventType.CLICK) {
-            sql.append("click_cnt = click_cnt + 1");
-            hasUpdate = true;
-        } else if (eventType == EventType.LIKE) {
-            sql.append("like_cnt = like_cnt + 1");
-            hasUpdate = true;
-        } else if (eventType == EventType.FINISH) {
-            sql.append("finish_cnt = finish_cnt + 1");
-            hasUpdate = true;
-        } else if (eventType == EventType.SHARE) {
-            sql.append("share_cnt = share_cnt + 1");
-            hasUpdate = true;
-        }
-
-        if (watchMs > 0) {
-            if (hasUpdate) {
-                sql.append(", ");
-            }
-            sql.append("watch_time_sum = watch_time_sum + ").append(watchMs);
-            hasUpdate = true;
-        }
-
-        if (!hasUpdate) {
-            // Nothing to update (e.g. share event with 0 watch time)
-            return;
-        }
-
-        updateWrapper.setSql(sql.toString());
-        boolean success = update(updateWrapper);
-
-        // 2. If update fails (row doesn't exist), insert new row
-        if (!success) {
-            VideoStatsDaily newStats = new VideoStatsDaily();
-            newStats.setVideoId(videoId);
-            newStats.setDate(today);
-            newStats.setWatchTimeSum((long) watchMs);
-            newStats.setImprCnt(0L);
-            newStats.setClickCnt(0L);
-            newStats.setLikeCnt(0L);
-            newStats.setFinishCnt(0L);
-            newStats.setShareCnt(0L);
-
-            if (eventType == EventType.IMPR) newStats.setImprCnt(1L);
-            else if (eventType == EventType.CLICK) newStats.setClickCnt(1L);
-            else if (eventType == EventType.LIKE) newStats.setLikeCnt(1L);
-            else if (eventType == EventType.FINISH) newStats.setFinishCnt(1L);
-            else if (eventType == EventType.SHARE) newStats.setShareCnt(1L);
-
-            try {
-                save(newStats);
-            } catch (DuplicateKeyException e) {
-                // If insert fails due to race condition, retry update
-                update(updateWrapper);
-            }
-        }
+        baseMapper.upsertStats(videoId, today, impr, click, like, finish, share, (long) watchMs);
     }
 }
