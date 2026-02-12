@@ -44,7 +44,8 @@ backend/target/
 backend/nul
 nul
 */nul
-*/opencode
+*/.opencode
+*/.codex
 
 node_modules/
 .npm-cache/

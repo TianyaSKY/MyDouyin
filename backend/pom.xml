@@ -24,6 +24,7 @@
         <milvus.version>2.3.4</milvus.version>
         <mybatis-plus.version>3.5.6</mybatis-plus.version>
         <maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
+        <spring-dotenv.version>5.0.1</spring-dotenv.version>
     </properties>
 
     <dependencies>
@@ -101,6 +102,14 @@
             <version>2.5.0</version>
         </dependency>
 
+        <!-- Load .env into Spring Environment for local development -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>springboot3-dotenv</artifactId>
+            <version>${spring-dotenv.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -154,7 +163,7 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                     </includes>
-                    <argLine>-Xmx1024m</argLine>
+                    <argLine>${argLine} -Xmx1024m</argLine>
                 </configuration>
             </plugin>
 
