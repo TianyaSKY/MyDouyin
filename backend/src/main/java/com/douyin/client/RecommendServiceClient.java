@@ -33,7 +33,13 @@ public class RecommendServiceClient {
     /**
      * 生成视频向量
      */
-    public List<Float> generateVideoEmbedding(Long videoId, String title, List<String> tags) {
+    public List<Float> generateVideoEmbedding(
+            Long videoId,
+            String title,
+            List<String> tags,
+            String coverUrl,
+            String videoUrl
+    ) {
         try {
             String url = recommendServiceUrl + "/api/embedding/video";
             
@@ -41,6 +47,8 @@ public class RecommendServiceClient {
             request.put("video_id", videoId);
             request.put("title", title);
             request.put("tags", tags);
+            request.put("cover_url", coverUrl);
+            request.put("video_url", videoUrl);
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

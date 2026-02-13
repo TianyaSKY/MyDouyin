@@ -51,7 +51,13 @@ public class VideoEmbeddingConsumer {
             String title = video.getTitle() != null ? video.getTitle() : "";
             List<String> tags = video.getTags() != null ? video.getTags() : List.of();
 
-            List<Float> embedding = recommendServiceClient.generateVideoEmbedding(videoId, title, tags);
+            List<Float> embedding = recommendServiceClient.generateVideoEmbedding(
+                    videoId,
+                    title,
+                    tags,
+                    video.getCoverUrl(),
+                    video.getVideoUrl()
+            );
             if (embedding == null || embedding.size() != VECTOR_DIM) {
                 log.warn("Invalid video embedding generated. videoId={}, dimension={}",
                         videoId, embedding == null ? 0 : embedding.size());

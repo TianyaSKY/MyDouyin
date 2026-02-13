@@ -3,17 +3,113 @@
 """
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from threading import Lock
+from time import time
 from typing import Any, Dict, List, Optional
 
 import requests
 
 from app.core.config import settings
+from app.services.tmper_upload_service import tmper_upload_service
 
 logger = logging.getLogger(__name__)
 
 
 class VideoEmbeddingService:
     """视频向量生成服务"""
+
+    _UPLOAD_URL_CACHE: Dict[str, Dict[str, Any]] = {}
+    _CACHE_LOCK = Lock()
+    _CACHE_TTL_SECONDS = 30 * 60
+
+    @staticmethod
+    def _project_root() -> Path:
+        return Path(__file__).resolve().parents[3]
+
+    @staticmethod
+    def _resolve_local_media_path(url_or_path: str) -> Optional[Path]:
+        if not url_or_path:
+            return None
+
+        raw = url_or_path.strip()
+        if not raw:
+            return None
+        if raw.startswith("http://") or raw.startswith("https://"):
+            return None
+
+        if raw.startswith("/uploads/"):
+            # 约定：/uploads/** 对应项目根目录 storage/**
+            local_path = VideoEmbeddingService._project_root() / "storage" / raw[len("/uploads/"):]
+            return local_path if local_path.exists() else None
+
+        path_obj = Path(raw)
+        if path_obj.is_absolute():
+            return path_obj if path_obj.exists() else None
+
+        candidate_paths = [
+            VideoEmbeddingService._project_root() / raw.lstrip("/\\"),
+            VideoEmbeddingService._project_root() / "storage" / raw.lstrip("/\\"),
+        ]
+        for candidate in candidate_paths:
+            if candidate.exists():
+                return candidate
+        return None
+
+    @staticmethod
+    def _to_public_url(url_or_path: Optional[str]) -> Optional[str]:
+        if not url_or_path:
+            return None
+        value = url_or_path.strip()
+        if not value:
+            return None
+        if value.startswith("http://") or value.startswith("https://"):
+            return value
+
+        now = time()
+        with VideoEmbeddingService._CACHE_LOCK:
+            cached = VideoEmbeddingService._UPLOAD_URL_CACHE.get(value)
+            if cached and cached.get("expires_at", 0) > now:
+                cached_url = cached.get("url")
+                if isinstance(cached_url, str) and cached_url:
+                    return cached_url
+
+        local_path = VideoEmbeddingService._resolve_local_media_path(value)
+        if local_path is None:
+            raise ValueError(f"Local media path not found: {value}")
+        if not local_path.is_file():
+            raise ValueError(f"Local media path is not a file: {value}")
+
+        content = local_path.read_bytes()
+        if not content:
+            raise ValueError(f"Local media file is empty: {value}")
+
+        suffix = local_path.suffix.lower()
+        content_type_map = {
+            ".mp4": "video/mp4",
+            ".mov": "video/quicktime",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".webp": "image/webp",
+        }
+        content_type = content_type_map.get(suffix, "application/octet-stream")
+        upload_result = tmper_upload_service.upload_file(
+            filename=local_path.name,
+            content=content,
+            content_type=content_type,
+        )
+        public_url = upload_result.get("url")
+        if not public_url:
+            raise ValueError("tmper upload success but no url in response")
+        public_url = str(public_url)
+
+        with VideoEmbeddingService._CACHE_LOCK:
+            VideoEmbeddingService._UPLOAD_URL_CACHE[value] = {
+                "url": public_url,
+                "expires_at": now + VideoEmbeddingService._CACHE_TTL_SECONDS,
+            }
+        return public_url
 
     @staticmethod
     def _extract_embedding(data: Any) -> Optional[List[float]]:
@@ -84,10 +180,12 @@ class VideoEmbeddingService:
             text_content = " ".join(part for part in text_parts if part)
 
             contents: List[Dict[str, Any]] = [{"text": text_content}]
-            if cover_url:
-                contents.append({"image": cover_url})
-            if video_url:
-                contents.append({"video": video_url})
+            public_cover_url = VideoEmbeddingService._to_public_url(cover_url) if cover_url else None
+            public_video_url = VideoEmbeddingService._to_public_url(video_url) if video_url else None
+            if public_cover_url:
+                contents.append({"image": public_cover_url})
+            if public_video_url:
+                contents.append({"video": public_video_url})
 
             payload = {
                 "model": settings.DASHSCOPE_MULTIMODAL_MODEL,
