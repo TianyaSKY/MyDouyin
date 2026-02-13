@@ -4,7 +4,34 @@ import { useAuthContext } from '../../contexts/AuthContext';
 import { getAuthorVideos } from '../../api/video';
 import { getUserStats } from '../../api/user';
 import { ProfileSkeleton } from '../Common/Skeleton';
-import { Lock, Menu, Copy } from 'lucide-react';
+import { Lock, Menu, Copy, Play } from 'lucide-react';
+import { getCoverUrl } from '../../utils/media';
+
+const VideoGridItem = ({ video }) => {
+    const [imgError, setImgError] = useState(false);
+
+    return (
+        <div className="aspect-[3/4] bg-gray-900 relative cursor-pointer group">
+            {!imgError ? (
+                <img
+                    src={getCoverUrl(video.coverUrl)}
+                    className="w-full h-full object-cover"
+                    onError={() => setImgError(true)}
+                    loading="lazy"
+                    alt={video.title}
+                />
+            ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-800 text-gray-500">
+                    <Play size={24} fill="currentColor" />
+                </div>
+            )}
+            <div className="absolute bottom-1 left-1 flex items-center text-xs text-white drop-shadow-md font-medium">
+                <span className="mr-1"><Play size={10} fill="currentColor" /></span>
+                {video.viewCount || 0}
+            </div>
+        </div>
+    );
+};
 
 const ProfilePage = () => {
     const { user, token, handleLogout } = useAuthContext();
@@ -119,17 +146,11 @@ const ProfilePage = () => {
             </div >
 
             {/* Grid */}
-            < div className="grid grid-cols-3 gap-[1px] mt-[1px]" >
+            <div className="grid grid-cols-3 gap-[1px] mt-[1px]">
                 {activeTab === 'works' ? (
                     videos.length > 0 ? (
                         videos.map(video => (
-                            <div key={video.id} className="aspect-[3/4] bg-gray-900 relative">
-                                <img src={video.coverUrl} className="w-full h-full object-cover" />
-                                <div className="absolute bottom-1 left-1 flex items-center text-xs text-white drop-shadow-md">
-                                    <span className="mr-1">▷</span>
-                                    {video.viewCount || 0}
-                                </div>
-                            </div>
+                            <VideoGridItem key={video.id} video={video} />
                         ))
                     ) : (
                         <div className="col-span-3 py-20 text-center text-gray-500 text-sm">
@@ -141,7 +162,7 @@ const ProfilePage = () => {
                         {activeTab === 'private' ? '私密视频仅自己可见' : '喜欢的视频仅自己可见'}
                     </div>
                 )}
-            </div >
+            </div>
         </div >
     );
 };

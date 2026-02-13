@@ -3,6 +3,7 @@ package com.douyin.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.douyin.common.Result;
 import com.douyin.common.config.RabbitMQConfig;
+import com.douyin.common.util.MediaUrlResolver;
 import com.douyin.entity.dto.UploadCompleteRequest;
 import com.douyin.entity.dto.UploadCompleteResponse;
 import com.douyin.entity.dto.UploadInitRequest;
@@ -31,6 +32,7 @@ public class VideoController {
     private final VideoService videoService;
     private final VideoUploadService videoUploadService;
     private final RabbitTemplate rabbitTemplate;
+    private final MediaUrlResolver mediaUrlResolver;
 
     /**
      * GET /api/videos/{id} - Get video by ID
@@ -38,6 +40,7 @@ public class VideoController {
     @GetMapping("/{id}")
     public Result<Video> getById(@PathVariable Long id) {
         Video video = videoService.getById(id);
+        toPublicUrls(video);
         return video != null ? Result.ok(video) : Result.fail(404, "Video not found");
     }
 
@@ -49,7 +52,9 @@ public class VideoController {
             @RequestParam(defaultValue = "PUBLISHED") VideoStatus status,
             @RequestParam(defaultValue = "1") int current,
             @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(videoService.pageByStatus(status, current, size));
+        IPage<Video> page = videoService.pageByStatus(status, current, size);
+        toPublicUrls(page);
+        return Result.ok(page);
     }
 
     /**
@@ -60,7 +65,9 @@ public class VideoController {
             @PathVariable Long authorId,
             @RequestParam(defaultValue = "1") int current,
             @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(videoService.pageByAuthor(authorId, current, size));
+        IPage<Video> page = videoService.pageByAuthor(authorId, current, size);
+        toPublicUrls(page);
+        return Result.ok(page);
     }
 
     /**
@@ -70,12 +77,21 @@ public class VideoController {
      */
     @PostMapping
     public Result<Video> create(@Valid @RequestBody CreateVideoRequest request) {
+        String coverUrl;
+        String videoUrl;
+        try {
+            coverUrl = mediaUrlResolver.normalizeForStorage(request.getCoverUrl());
+            videoUrl = mediaUrlResolver.normalizeForStorage(request.getVideoUrl());
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+
         Video video = new Video();
         video.setAuthorId(request.getAuthorId());
         video.setTitle(request.getTitle());
         video.setTags(request.getTags() == null ? List.of() : request.getTags());
-        video.setCoverUrl(request.getCoverUrl());
-        video.setVideoUrl(request.getVideoUrl());
+        video.setCoverUrl(coverUrl);
+        video.setVideoUrl(videoUrl);
         video.setStatus(VideoStatus.REVIEW); // New videos start as REVIEW
         videoService.save(video);
 
@@ -91,6 +107,7 @@ public class VideoController {
                 RabbitMQConfig.VIDEO_EMBEDDING_ROUTING_KEY,
                 message
         );
+        toPublicUrls(video);
         return Result.ok(video);
     }
 
@@ -99,8 +116,20 @@ public class VideoController {
      */
     @PutMapping("/{id}")
     public Result<Video> update(@PathVariable Long id, @Valid @RequestBody Video video) {
+        try {
+            if (video.getCoverUrl() != null) {
+                video.setCoverUrl(mediaUrlResolver.normalizeForStorage(video.getCoverUrl()));
+            }
+            if (video.getVideoUrl() != null) {
+                video.setVideoUrl(mediaUrlResolver.normalizeForStorage(video.getVideoUrl()));
+            }
+        } catch (IllegalArgumentException e) {
+            return Result.fail(400, e.getMessage());
+        }
+
         video.setId(id);
         boolean updated = videoService.updateById(video);
+        toPublicUrls(video);
         return updated ? Result.ok(video) : Result.fail(404, "Video not found");
     }
 
@@ -131,7 +160,9 @@ public class VideoController {
      */
     @PostMapping("/upload/init")
     public Result<UploadInitResponse> initUpload(@Valid @RequestBody UploadInitRequest request) {
-        return Result.ok(videoUploadService.initUpload(request));
+        UploadInitResponse response = videoUploadService.initUpload(request);
+        response.setVideoUrl(mediaUrlResolver.toPublicUrl(response.getVideoUrl()));
+        return Result.ok(response);
     }
 
     /**
@@ -151,7 +182,7 @@ public class VideoController {
      */
     @PostMapping(value = "/upload/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<String> uploadCover(@RequestPart("file") MultipartFile file) {
-        return Result.ok(videoUploadService.uploadCover(file));
+        return Result.ok(mediaUrlResolver.toPublicUrl(videoUploadService.uploadCover(file)));
     }
 
     /**
@@ -160,6 +191,25 @@ public class VideoController {
      */
     @PostMapping("/upload/complete")
     public Result<UploadCompleteResponse> completeUpload(@Valid @RequestBody UploadCompleteRequest request) {
-        return Result.ok(videoUploadService.completeUpload(request));
+        UploadCompleteResponse response = videoUploadService.completeUpload(request);
+        response.setVideoUrl(mediaUrlResolver.toPublicUrl(response.getVideoUrl()));
+        return Result.ok(response);
+    }
+
+    private void toPublicUrls(IPage<Video> page) {
+        if (page == null || page.getRecords() == null) {
+            return;
+        }
+        for (Video video : page.getRecords()) {
+            toPublicUrls(video);
+        }
+    }
+
+    private void toPublicUrls(Video video) {
+        if (video == null) {
+            return;
+        }
+        video.setCoverUrl(mediaUrlResolver.toPublicUrl(video.getCoverUrl()));
+        video.setVideoUrl(mediaUrlResolver.toPublicUrl(video.getVideoUrl()));
     }
 }

@@ -47,6 +47,7 @@ jwt:
   expiration: 604800000   # 7 days in ms (single token mode)
 
 app:
+  media-base-url: ${MEDIA_BASE_URL:http://localhost:18081}
   upload:
     base-dir: storage
     temp-dir: tmp
