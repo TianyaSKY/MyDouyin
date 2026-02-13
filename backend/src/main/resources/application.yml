@@ -53,6 +53,8 @@ app:
     temp-dir: tmp
     video-dir: videos
     url-prefix: /uploads/videos/
+    cover-dir: covers
+    cover-url-prefix: /uploads/covers/
 
 # Milvus Configuration
 milvus:

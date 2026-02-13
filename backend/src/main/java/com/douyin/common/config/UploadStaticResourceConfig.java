@@ -20,12 +20,23 @@ public class UploadStaticResourceConfig implements WebMvcConfigurer {
     @Value("${app.upload.url-prefix:/uploads/videos/}")
     private String urlPrefix;
 
+    @Value("${app.upload.cover-dir:covers}")
+    private String coverDirName;
+
+    @Value("${app.upload.cover-url-prefix:/uploads/covers/}")
+    private String coverUrlPrefix;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         Path videoRoot = Paths.get(baseDir).toAbsolutePath().normalize().resolve(videoDirName);
-        String pattern = normalizePrefix(urlPrefix) + "**";
-        registry.addResourceHandler(pattern)
+        String videoPattern = normalizePrefix(urlPrefix) + "**";
+        registry.addResourceHandler(videoPattern)
                 .addResourceLocations(videoRoot.toUri().toString());
+
+        Path coverRoot = Paths.get(baseDir).toAbsolutePath().normalize().resolve(coverDirName);
+        String coverPattern = normalizePrefix(coverUrlPrefix) + "**";
+        registry.addResourceHandler(coverPattern)
+                .addResourceLocations(coverRoot.toUri().toString());
     }
 
     private String normalizePrefix(String prefix) {

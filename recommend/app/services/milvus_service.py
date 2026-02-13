@@ -30,6 +30,46 @@ class MilvusService:
             logger.error(f"Failed to connect to Milvus: {e}")
             self.connected = False
 
+    @staticmethod
+    def _delete_by_field(collection: Collection, field_name: str, field_value: int) -> int:
+        """
+        按业务字段删除记录（兼容仅支持按主键 delete 的 Milvus 版本）。
+
+        逻辑：
+        1) 先 query 出匹配记录的主键值；
+        2) 再使用 `pk in [...]` 执行 delete。
+        """
+        pk_field = None
+        for field in collection.schema.fields:
+            if field.is_primary:
+                pk_field = field.name
+                break
+
+        if not pk_field:
+            raise RuntimeError(
+                f"Primary key field not found for collection {collection.name}"
+            )
+
+        matched = collection.query(
+            expr=f"{field_name} == {field_value}",
+            output_fields=[pk_field],
+        )
+        if not matched:
+            return 0
+
+        pk_values = [row[pk_field] for row in matched if pk_field in row]
+        if not pk_values:
+            return 0
+
+        if isinstance(pk_values[0], str):
+            quoted = [f'"{pk}"' for pk in pk_values]
+            delete_expr = f"{pk_field} in [{','.join(quoted)}]"
+        else:
+            delete_expr = f"{pk_field} in [{','.join(map(str, pk_values))}]"
+
+        result = collection.delete(delete_expr)
+        return result.delete_count if result else 0
+
     def insert_user_vector(
         self, user_id: int, long_term_vec: List[float], interest_vec: List[float]
     ) -> bool:
@@ -140,8 +180,8 @@ class MilvusService:
 
             collection = Collection("user_long_term_vectors")
 
-            # 先删除旧数据
-            collection.delete(f"user_id == {user_id}")
+            # 先删除旧数据（兼容仅支持按主键 delete 的 Milvus）
+            self._delete_by_field(collection, "user_id", user_id)
 
             # 插入新数据
             now = int(time.time() * 1000)
@@ -296,8 +336,8 @@ class MilvusService:
                 logger.error(f"Invalid embedding dimension for video {video_id}")
                 return False
 
-            # 幂等写入：先删除旧记录，再插入最新向量
-            collection.delete(f"video_id == {video_id}")
+            # 幂等写入：先删除旧记录，再插入最新向量（兼容仅支持按主键 delete 的 Milvus）
+            self._delete_by_field(collection, "video_id", video_id)
 
             # 准备数据
             entities = [[video_id], [embedding], [author_id], [created_ts]]
