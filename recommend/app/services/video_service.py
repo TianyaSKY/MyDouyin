@@ -61,9 +61,6 @@ class VideoEmbeddingService:
 
     @staticmethod
     def _resolve_local_media_path(url_or_path: str) -> Optional[Path]:
-        if not url_or_path:
-            return None
-
         raw = url_or_path.strip()
         if not raw:
             return None
@@ -78,14 +75,6 @@ class VideoEmbeddingService:
         path_obj = Path(raw)
         if path_obj.is_absolute():
             return path_obj if path_obj.exists() else None
-
-        candidate_paths = [
-            VideoEmbeddingService._project_root() / raw.lstrip("/\\"),
-            VideoEmbeddingService._project_root() / "storage" / raw.lstrip("/\\"),
-        ]
-        for candidate in candidate_paths:
-            if candidate.exists():
-                return candidate
         return None
 
     @staticmethod
@@ -277,4 +266,3 @@ class VideoEmbeddingService:
 
 
 video_embedding_service = VideoEmbeddingService()
-

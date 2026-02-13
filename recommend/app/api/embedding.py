@@ -2,7 +2,6 @@
 Embedding API 路由
 """
 from fastapi import APIRouter, HTTPException
-import logging
 import time
 
 from app.schemas import (
@@ -15,8 +14,6 @@ from app.schemas import (
     UserEmbeddingResponse,
 )
 from app.services import video_embedding_service, user_embedding_service, milvus_service
-
-logger = logging.getLogger(__name__)
 router = APIRouter(tags=["embedding"])
 
 
@@ -29,24 +26,19 @@ async def generate_video_embedding(request: VideoEmbeddingRequest):
     - **title**: 视频标题
     - **tags**: 视频标签列表
     """
-    try:
-        embedding = video_embedding_service.generate_embedding(
-            video_id=request.video_id,
-            title=request.title,
-            tags=request.tags,
-            cover_url=request.cover_url,
-            video_url=request.video_url,
-        )
+    embedding = video_embedding_service.generate_embedding(
+        video_id=request.video_id,
+        title=request.title,
+        tags=request.tags,
+        cover_url=request.cover_url,
+        video_url=request.video_url,
+    )
 
-        return VideoEmbeddingResponse(
-            video_id=request.video_id,
-            embedding=embedding,
-            dimension=len(embedding)
-        )
-
-    except Exception as e:
-        logger.error(f"Error generating video embedding: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return VideoEmbeddingResponse(
+        video_id=request.video_id,
+        embedding=embedding,
+        dimension=len(embedding)
+    )
 
 
 @router.post("/embedding/video/batch", response_model=BatchVideoEmbeddingResponse)
@@ -57,24 +49,16 @@ async def generate_video_embeddings_batch(request: BatchVideoEmbeddingRequest):
     - **videos**: 每条视频的完整多模态信息（推荐）
     - **video_ids**: 仅视频ID（兼容旧格式）
     """
-    try:
-        video_items = None
-        if request.videos:
-            video_items = [item.model_dump() for item in request.videos]
+    video_items = [item.model_dump() for item in request.videos] if request.videos else None
+    embeddings = video_embedding_service.generate_embeddings_batch(
+        video_ids=request.video_ids,
+        video_items=video_items,
+    )
 
-        embeddings = video_embedding_service.generate_embeddings_batch(
-            video_ids=request.video_ids,
-            video_items=video_items,
-        )
-
-        return BatchVideoEmbeddingResponse(
-            embeddings=embeddings,
-            count=len(embeddings)
-        )
-
-    except Exception as e:
-        logger.error(f"Error generating batch video embeddings: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return BatchVideoEmbeddingResponse(
+        embeddings=embeddings,
+        count=len(embeddings)
+    )
 
 
 @router.post("/embedding/video/insert")
@@ -87,27 +71,17 @@ async def insert_video_embedding(request: InsertVideoEmbeddingRequest):
     - **author_id**: 作者ID
     - **created_ts**: 创建时间戳（毫秒，可选）
     """
-    try:
-        if len(request.embedding) != 128:
-            raise HTTPException(status_code=400, detail="Embedding dimension must be 128")
+    created_ts = request.created_ts if request.created_ts is not None else int(time.time() * 1000)
+    success = milvus_service.insert_video_embedding(
+        video_id=request.video_id,
+        embedding=request.embedding,
+        author_id=request.author_id,
+        created_ts=created_ts
+    )
 
-        created_ts = request.created_ts if request.created_ts is not None else int(time.time() * 1000)
-        success = milvus_service.insert_video_embedding(
-            video_id=request.video_id,
-            embedding=request.embedding,
-            author_id=request.author_id,
-            created_ts=created_ts
-        )
-
-        if success:
-            return {"success": True, "message": "Video embedding inserted"}
-        raise HTTPException(status_code=500, detail="Failed to insert video embedding")
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error inserting video embedding: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    if success:
+        return {"success": True, "message": "Video embedding inserted"}
+    raise HTTPException(status_code=500, detail="Failed to insert video embedding")
 
 
 @router.post("/embedding/user", response_model=UserEmbeddingResponse)
@@ -118,21 +92,16 @@ async def calculate_user_embedding(request: UserEmbeddingRequest):
     - **user_id**: 用户ID
     - **recent_events**: 最近的交互行为列表
     """
-    try:
-        events_data = [event.dict() for event in request.recent_events]
+    events_data = [event.model_dump() for event in request.recent_events]
 
-        embedding = user_embedding_service.calculate_embedding(
-            user_id=request.user_id,
-            recent_events=events_data
-        )
+    embedding = user_embedding_service.calculate_embedding(
+        user_id=request.user_id,
+        recent_events=events_data
+    )
 
-        return UserEmbeddingResponse(
-            user_id=request.user_id,
-            embedding=embedding,
-            dimension=len(embedding),
-            events_count=len(request.recent_events)
-        )
-
-    except Exception as e:
-        logger.error(f"Error calculating user embedding: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return UserEmbeddingResponse(
+        user_id=request.user_id,
+        embedding=embedding,
+        dimension=len(embedding),
+        events_count=len(request.recent_events)
+    )
