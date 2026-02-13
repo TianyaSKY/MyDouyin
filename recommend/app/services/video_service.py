@@ -3,11 +3,11 @@
 """
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from hashlib import sha256
 from pathlib import Path
-from threading import Lock
-from time import time
 from typing import Any, Dict, List, Optional
 
+import redis
 import requests
 
 from app.core.config import settings
@@ -19,13 +19,45 @@ logger = logging.getLogger(__name__)
 class VideoEmbeddingService:
     """视频向量生成服务"""
 
-    _UPLOAD_URL_CACHE: Dict[str, Dict[str, Any]] = {}
-    _CACHE_LOCK = Lock()
-    _CACHE_TTL_SECONDS = 30 * 60
+    _CACHE_TTL_SECONDS = 30 * 60  # 30min
+    _CACHE_KEY_PREFIX = "recommend:upload:url:"
+    _redis_client: Optional[redis.Redis] = None
 
     @staticmethod
     def _project_root() -> Path:
         return Path(__file__).resolve().parents[3]
+
+    @classmethod
+    def _get_redis_client(cls) -> redis.Redis:
+        if cls._redis_client is None:
+            cls._redis_client = redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
+                password=settings.REDIS_PASSWORD,
+                decode_responses=True,
+            )
+        return cls._redis_client
+
+    @staticmethod
+    def _cache_key(local_ref: str) -> str:
+        digest = sha256(local_ref.encode("utf-8")).hexdigest()
+        return f"{VideoEmbeddingService._CACHE_KEY_PREFIX}{digest}"
+
+    @classmethod
+    def _get_cached_public_url(cls, local_ref: str) -> Optional[str]:
+        value = cls._get_redis_client().get(cls._cache_key(local_ref))
+        if isinstance(value, str) and value:
+            return value
+        return None
+
+    @classmethod
+    def _set_cached_public_url(cls, local_ref: str, public_url: str) -> None:
+        cls._get_redis_client().setex(
+            cls._cache_key(local_ref),
+            cls._CACHE_TTL_SECONDS,
+            public_url,
+        )
 
     @staticmethod
     def _resolve_local_media_path(url_or_path: str) -> Optional[Path]:
@@ -66,13 +98,9 @@ class VideoEmbeddingService:
         if value.startswith("http://") or value.startswith("https://"):
             return value
 
-        now = time()
-        with VideoEmbeddingService._CACHE_LOCK:
-            cached = VideoEmbeddingService._UPLOAD_URL_CACHE.get(value)
-            if cached and cached.get("expires_at", 0) > now:
-                cached_url = cached.get("url")
-                if isinstance(cached_url, str) and cached_url:
-                    return cached_url
+        cached_url = VideoEmbeddingService._get_cached_public_url(value)
+        if cached_url:
+            return cached_url
 
         local_path = VideoEmbeddingService._resolve_local_media_path(value)
         if local_path is None:
@@ -104,50 +132,8 @@ class VideoEmbeddingService:
             raise ValueError("tmper upload success but no url in response")
         public_url = str(public_url)
 
-        with VideoEmbeddingService._CACHE_LOCK:
-            VideoEmbeddingService._UPLOAD_URL_CACHE[value] = {
-                "url": public_url,
-                "expires_at": now + VideoEmbeddingService._CACHE_TTL_SECONDS,
-            }
+        VideoEmbeddingService._set_cached_public_url(value, public_url)
         return public_url
-
-    @staticmethod
-    def _extract_embedding(data: Any) -> Optional[List[float]]:
-        """
-        递归提取响应中的第一个向量字段。
-        """
-        if isinstance(data, list):
-            if data and all(isinstance(item, (int, float)) for item in data):
-                return [float(item) for item in data]
-            for item in data:
-                embedding = VideoEmbeddingService._extract_embedding(item)
-                if embedding is not None:
-                    return embedding
-            return None
-
-        if isinstance(data, dict):
-            for key in ("embedding", "embeddings", "dense_embedding", "vector"):
-                if key in data:
-                    embedding = VideoEmbeddingService._extract_embedding(data[key])
-                    if embedding is not None:
-                        return embedding
-            for value in data.values():
-                embedding = VideoEmbeddingService._extract_embedding(value)
-                if embedding is not None:
-                    return embedding
-        return None
-
-    @staticmethod
-    def _normalize_embedding(embedding: List[float]) -> List[float]:
-        """
-        对齐向量维度，保持与系统配置一致（默认 128）。
-        """
-        target_dim = settings.EMBEDDING_DIM
-        if len(embedding) == target_dim:
-            return embedding
-        if len(embedding) > target_dim:
-            return embedding[:target_dim]
-        return embedding + [0.0] * (target_dim - len(embedding))
 
     @staticmethod
     def generate_embedding(
@@ -202,16 +188,30 @@ class VideoEmbeddingService:
                 settings.DASHSCOPE_EMBEDDING_URL,
                 json=payload,
                 headers=headers,
-                timeout=30,
+                timeout=120,
             )
             response.raise_for_status()
             response_data = response.json()
 
-            raw_embedding = VideoEmbeddingService._extract_embedding(response_data)
-            if not raw_embedding:
-                raise ValueError("No embedding found in DashScope response")
+            output = response_data.get("output", {})
+            embeddings = output.get("embeddings", [])
+            if not isinstance(embeddings, list) or not embeddings:
+                raise ValueError("No embeddings found in DashScope response")
 
-            embedding = VideoEmbeddingService._normalize_embedding(raw_embedding)
+            first = embeddings[0]
+            if not isinstance(first, dict):
+                raise ValueError("Invalid embeddings format in DashScope response")
+
+            raw_embedding = first.get("embedding")
+            if not isinstance(raw_embedding, list) or not raw_embedding:
+                raise ValueError("No embedding vector found in DashScope response")
+            if not all(isinstance(item, (int, float)) for item in raw_embedding):
+                raise ValueError("Invalid embedding vector type in DashScope response")
+
+            target_dim = settings.EMBEDDING_DIM
+            embedding = [float(item) for item in raw_embedding[:target_dim]]
+            if len(embedding) < target_dim:
+                embedding.extend([0.0] * (target_dim - len(embedding)))
             logger.info(f"Generated embedding via DashScope for video {video_id}")
             return embedding
 
@@ -220,23 +220,18 @@ class VideoEmbeddingService:
             raise
 
     @staticmethod
-    def _generate_single_from_item(item: Dict[str, Any]) -> List[float]:
-        video_id = int(item["video_id"])
-        return VideoEmbeddingService.generate_embedding(
-            video_id=video_id,
-            title=item.get("title", ""),
-            tags=item.get("tags", []),
-            cover_url=item.get("cover_url"),
-            video_url=item.get("video_url"),
-        )
-
-    @staticmethod
-    def _generate_single_from_id(video_id: int) -> List[float]:
-        return VideoEmbeddingService.generate_embedding(
-            video_id=video_id,
-            title=f"video_{video_id}",
-            tags=[],
-        )
+    def _run_batch(tasks: Dict[int, Dict[str, Any]]) -> Dict[int, List[float]]:
+        embeddings: Dict[int, List[float]] = {}
+        max_workers = min(8, max(1, len(tasks)))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_video_id = {
+                executor.submit(VideoEmbeddingService.generate_embedding, **payload): video_id
+                for video_id, payload in tasks.items()
+            }
+            for future in as_completed(future_to_video_id):
+                video_id = future_to_video_id[future]
+                embeddings[video_id] = future.result()
+        return embeddings
 
     @staticmethod
     def generate_embeddings_batch(
@@ -245,47 +240,37 @@ class VideoEmbeddingService:
     ) -> Dict[int, List[float]]:
         """
         批量生成视频向量
-
-        Args:
-            video_ids: 视频ID列表
-            video_items: 视频完整信息列表
-
-        Returns:
-            {video_id: embedding} 字典
         """
         try:
-            embeddings: Dict[int, List[float]] = {}
-
             if video_items:
-                max_workers = min(8, max(1, len(video_items)))
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    future_to_video_id = {
-                        executor.submit(VideoEmbeddingService._generate_single_from_item, item): int(item["video_id"])
-                        for item in video_items
+                tasks = {
+                    int(item["video_id"]): {
+                        "video_id": int(item["video_id"]),
+                        "title": item.get("title", ""),
+                        "tags": item.get("tags", []),
+                        "cover_url": item.get("cover_url"),
+                        "video_url": item.get("video_url"),
                     }
-                    for future in as_completed(future_to_video_id):
-                        video_id = future_to_video_id[future]
-                        embeddings[video_id] = future.result()
-                logger.info(f"Generated batch embeddings via DashScope for {len(video_items)} videos")
+                    for item in video_items
+                }
+                embeddings = VideoEmbeddingService._run_batch(tasks)
+                logger.info(f"Generated batch embeddings via DashScope for {len(tasks)} videos")
                 return embeddings
 
             if video_ids:
-                max_workers = min(8, max(1, len(video_ids)))
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    future_to_video_id = {
-                        executor.submit(VideoEmbeddingService._generate_single_from_id, int(video_id)): int(video_id)
-                        for video_id in video_ids
+                tasks = {
+                    int(video_id): {
+                        "video_id": int(video_id),
+                        "title": f"video_{int(video_id)}",
+                        "tags": [],
                     }
-                    for future in as_completed(future_to_video_id):
-                        video_id = future_to_video_id[future]
-                        embeddings[video_id] = future.result()
-                logger.info(f"Generated batch embeddings via DashScope for {len(video_ids)} videos")
+                    for video_id in video_ids
+                }
+                embeddings = VideoEmbeddingService._run_batch(tasks)
+                logger.info(f"Generated batch embeddings via DashScope for {len(tasks)} videos")
                 return embeddings
 
             raise ValueError("videos or video_ids must be provided")
-
-            return embeddings
-
         except Exception as e:
             logger.error(f"Error generating batch embeddings: {e}")
             raise
