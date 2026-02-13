@@ -40,9 +40,9 @@
 ### 2.3 Frontend
 
 - 工作目录：`frontend/`
-- 安装依赖：`pnpm install`
-- 开发运行：`pnpm dev`
-- 构建：`pnpm build`
+- 安装依赖：`npm install`
+- 开发运行：`npm dev` 并设置最多运行20s
+- 构建：`npm build` (用于验证是否有项目的语法 插件兼容错误)
 
 ### 2.4 基础设施
 

@@ -7,6 +7,7 @@ import com.douyin.entity.dto.UploadCompleteRequest;
 import com.douyin.entity.dto.UploadCompleteResponse;
 import com.douyin.entity.dto.UploadInitRequest;
 import com.douyin.entity.dto.UploadInitResponse;
+import com.douyin.entity.dto.CreateVideoRequest;
 import com.douyin.entity.Video;
 import com.douyin.entity.dto.VideoEmbeddingTaskMessage;
 import com.douyin.entity.enums.VideoStatus;
@@ -19,6 +20,8 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/videos")
@@ -66,7 +69,13 @@ public class VideoController {
      * 不负责二进制文件上传；文件上传走 /upload/init|chunk|complete 三段式流程。
      */
     @PostMapping
-    public Result<Video> create(@Valid @RequestBody Video video) {
+    public Result<Video> create(@Valid @RequestBody CreateVideoRequest request) {
+        Video video = new Video();
+        video.setAuthorId(request.getAuthorId());
+        video.setTitle(request.getTitle());
+        video.setTags(request.getTags() == null ? List.of() : request.getTags());
+        video.setCoverUrl(request.getCoverUrl());
+        video.setVideoUrl(request.getVideoUrl());
         video.setStatus(VideoStatus.REVIEW); // New videos start as REVIEW
         videoService.save(video);
 
@@ -135,6 +144,14 @@ public class VideoController {
                                     @RequestPart("chunk") MultipartFile chunk) {
         videoUploadService.uploadChunk(uploadId, chunkIndex, chunk);
         return Result.ok();
+    }
+
+    /**
+     * POST /api/videos/upload/cover - Upload cover image
+     */
+    @PostMapping(value = "/upload/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<String> uploadCover(@RequestPart("file") MultipartFile file) {
+        return Result.ok(videoUploadService.uploadCover(file));
     }
 
     /**

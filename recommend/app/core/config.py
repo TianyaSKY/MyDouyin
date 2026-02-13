@@ -4,7 +4,7 @@
 from pathlib import Path
 from typing import Optional
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 PROJECT_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
@@ -12,6 +12,12 @@ PROJECT_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
 
 class Settings(BaseSettings):
     """应用配置"""
+
+    model_config = SettingsConfigDict(
+        env_file=str(PROJECT_ROOT_ENV),
+        case_sensitive=True,
+        extra="ignore",
+    )
 
     # 应用配置
     APP_NAME: str = "Douyin Recommendation Service"
@@ -59,10 +65,5 @@ class Settings(BaseSettings):
     @property
     def PORT(self) -> int:
         return self.RECOMMEND_PORT
-
-    class Config:
-        env_file = str(PROJECT_ROOT_ENV)
-        case_sensitive = True
-
 
 settings = Settings()

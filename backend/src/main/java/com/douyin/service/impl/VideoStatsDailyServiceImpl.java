@@ -45,6 +45,15 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
         long finish = eventType == EventType.FINISH ? 1 : 0;
         long share = eventType == EventType.SHARE ? 1 : 0;
 
-        baseMapper.upsertStats(videoId, today, impr, click, like, finish, share, (long) watchMs);
+    }
+
+    @Override
+    public Long getTotalLikesByAuthor(Long authorId) {
+        return baseMapper.sumLikesByAuthorId(authorId);
+    }
+
+    @Override
+    public VideoStatsDaily getTotalStatsByVideo(Long videoId) {
+        return baseMapper.sumStatsByVideoId(videoId);
     }
 }

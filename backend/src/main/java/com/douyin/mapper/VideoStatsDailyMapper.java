@@ -42,4 +42,19 @@ public interface VideoStatsDailyMapper extends BaseMapper<VideoStatsDaily> {
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    /**
+     * Sum total likes for a user's videos.
+     */
+    @Select("SELECT COALESCE(SUM(s.like_cnt), 0) FROM video_stats_daily s " +
+            "JOIN video v ON s.video_id = v.id " +
+            "WHERE v.author_id = #{authorId}")
+    Long sumLikesByAuthorId(@Param("authorId") Long authorId);
+
+    /**
+     * Sum total stats for a specific video.
+     */
+    @Select("SELECT COALESCE(SUM(impr_cnt), 0) as imprCnt, COALESCE(SUM(like_cnt), 0) as likeCnt " +
+            "FROM video_stats_daily WHERE video_id = #{videoId}")
+    VideoStatsDaily sumStatsByVideoId(@Param("videoId") Long videoId);
 }

@@ -1,20 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  body {
+    @apply bg-black text-white overflow-hidden;
+    -webkit-font-smoothing: antialiased; /* Keep existing antialiasing */
+  }
+}
+
 :root {
-  font-family: Arial, sans-serif;
+  --bg-black: #000000;
+  --bg-dark: #0a0a0a;
+  --panel: rgba(18, 18, 18, 0.7);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --line: rgba(255, 255, 255, 0.1);
+  --text-main: #ffffff;
+  --text-muted: #a1a1aa;
+  --accent-cyan: #00f2ea;
+  --accent-rose: #ff0050;
+  --accent-blue: #005fff;
+  --glass-bg: rgba(20, 20, 20, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --good-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-* {
-  box-sizing: border-box;
+/* Custom component styles */
+@layer components {
+  .auth-card {
+    @apply bg-dark-grey/80 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl;
+  }
+  
+  .auth-input {
+    @apply w-full px-4 py-3 bg-dark/50 border border-white/10 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200;
+  }
+  
+  .auth-button {
+    @apply w-full py-3 px-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .auth-switch {
+    @apply flex gap-2 mb-6;
+  }
+  
+  .auth-switch-btn {
+    @apply flex-1 py-2 px-4 bg-dark/50 border border-white/10 rounded-lg text-gray-400 hover:text-white hover:border-white/20 transition-all duration-200 cursor-pointer;
+  }
+  
+  .auth-switch-btn.active {
+    @apply bg-primary/20 border-primary text-primary;
+  }
+  
+  .error-message {
+    @apply text-red-400 text-sm mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg;
+  }
+  
+  .loading-spinner {
+    @apply animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full;
+  }
+  
+  .ambient-effect {
+    @apply fixed w-[500px] h-[500px] rounded-full blur-[80px] opacity-20 pointer-events-none -z-10 animate-float-pulse;
+  }
 }
 
+/* Base styles */
 body {
-  margin: 0;
-  min-height: 100vh;
+  font-family: 'Inter', 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-black);
+  color: var(--text-main);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
-.app {
-  min-height: 100vh;
-  display: grid;
-  place-content: center;
-  text-align: center;
-  gap: 8px;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--panel-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Focus styles for accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

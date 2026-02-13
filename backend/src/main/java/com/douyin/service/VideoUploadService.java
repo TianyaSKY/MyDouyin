@@ -12,5 +12,7 @@ public interface VideoUploadService {
 
     void uploadChunk(String uploadId, Integer chunkIndex, MultipartFile chunk);
 
+    String uploadCover(MultipartFile file);
+
     UploadCompleteResponse completeUpload(UploadCompleteRequest request);
 }

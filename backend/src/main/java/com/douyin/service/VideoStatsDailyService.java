@@ -25,4 +25,8 @@ public interface VideoStatsDailyService extends IService<VideoStatsDaily> {
      * @param watchMs watch time in milliseconds (to add to sum)
      */
     void incrementStats(Long videoId, EventType eventType, int watchMs);
+
+    Long getTotalLikesByAuthor(Long authorId);
+
+    VideoStatsDaily getTotalStatsByVideo(Long videoId);
 }

@@ -47,6 +47,78 @@ public class VideoUploadServiceImpl implements VideoUploadService {
     @Value("${app.upload.url-prefix:/uploads/videos/}")
     private String urlPrefix;
 
+    @Value("${app.upload.cover-dir:covers}")
+    private String coverDirName;
+
+    @Value("${app.upload.cover-url-prefix:/uploads/covers/}")
+    private String coverUrlPrefix;
+
+    @Override
+    public String uploadCover(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("Cover file cannot be empty");
+        }
+        
+        // Validate image type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new RuntimeException("Only image files are allowed");
+        }
+
+        try {
+            // Generate unique filename via MD5 of file content to avoid duplicates and strange chars
+            String originalFilename = file.getOriginalFilename();
+            String extension = safeExtension(originalFilename);
+            if (".mp4".equals(extension)) { // safeExtension defaults to .mp4, fix for images
+                extension = originalFilename != null && originalFilename.lastIndexOf(".") > 0 ? 
+                        originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase(Locale.ROOT) : ".jpg";
+            }
+            // Better/Safe extension handling for images
+            if (!List.of(".jpg", ".jpeg", ".png", ".webp", ".gif").contains(extension)) {
+                 // Fallback or strict check? Let's strict check common types or just allow save.
+                 // safeExtension implementation in this file is video-centric.
+                 // Let's implement a simple image extension extractor locally or improve safeExtension if it was generic, 
+                 // but safeExtension in this file forces .mp4.
+                 // Let's just use original extension if valid.
+                 int dotIndex = originalFilename.lastIndexOf('.');
+                 if (dotIndex != -1) {
+                     extension = originalFilename.substring(dotIndex).toLowerCase(Locale.ROOT);
+                 } else {
+                     extension = ".jpg";
+                 }
+            }
+
+            // Calculate hash for deduplication/naming
+            String fileHash;
+            try (InputStream in = file.getInputStream()) {
+                 // Create a temp hex of the file
+                 // Re-reading stream might be tricky if not supported, but MultipartFile usually supports multiple getInputStream() or we can read bytes.
+                 // Let's just use UUID for simplicity if hash is too expensive or complex here? 
+                 // The requirement didn't specify deduplication for covers, but it's good practice.
+                 // Let's read bytes since covers are small.
+                 byte[] bytes = file.getBytes();
+                 MessageDigest md = MessageDigest.getInstance("MD5");
+                 fileHash = toHex(md.digest(bytes));
+            }
+
+            String finalName = fileHash + extension;
+            Path coverDir = getBaseRoot().resolve(coverDirName);
+            if (!Files.exists(coverDir)) {
+                Files.createDirectories(coverDir);
+            }
+            
+            Path finalPath = coverDir.resolve(finalName);
+            if (!Files.exists(finalPath)) {
+                file.transferTo(finalPath);
+            }
+
+            return normalizeUrlPrefix(coverUrlPrefix) + finalName;
+
+        } catch (IOException | NoSuchAlgorithmException e) {
+            throw new RuntimeException("Failed to upload cover image", e);
+        }
+    }
+
     @Override
     public UploadInitResponse initUpload(UploadInitRequest request) {
         // 1) 校验并标准化 hash；uploadId 由 hash + size + totalChunks 组成，客户端重试可复用。

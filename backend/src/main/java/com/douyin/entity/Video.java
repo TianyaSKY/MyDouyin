@@ -38,4 +38,10 @@ public class Video {
     private String videoUrl;
 
     private LocalDateTime createdAt;
+
+    @TableField(exist = false)
+    private Long likeCount;
+
+    @TableField(exist = false)
+    private Long viewCount;
 }

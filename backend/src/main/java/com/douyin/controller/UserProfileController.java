@@ -62,4 +62,34 @@ public class UserProfileController {
         boolean removed = userProfileService.removeById(id);
         return removed ? Result.ok() : Result.fail(404, "User not found");
     }
+
+    private final com.douyin.service.VideoStatsDailyService videoStatsDailyService;
+    private final com.douyin.service.VideoService videoService;
+
+    /**
+     * GET /api/users/{id}/stats - Get user statistics
+     */
+    @GetMapping("/{id}/stats")
+    public Result<UserStatsResponse> getStats(@PathVariable Long id) {
+        Long totalLikes = videoStatsDailyService.getTotalLikesByAuthor(id);
+        long workCount = videoService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.douyin.entity.Video>()
+                .eq(com.douyin.entity.Video::getAuthorId, id));
+        
+        // Follower/Following not implemented yet
+        return Result.ok(new UserStatsResponse(
+                totalLikes != null ? totalLikes : 0L,
+                workCount,
+                0L,
+                0L
+        ));
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class UserStatsResponse {
+        private Long totalLikes;
+        private Long workCount;
+        private Long followingCount;
+        private Long followerCount;
+    }
 }
