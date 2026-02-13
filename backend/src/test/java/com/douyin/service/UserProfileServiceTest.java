@@ -1,5 +1,6 @@
 package com.douyin.service;
 
+import com.douyin.client.RecommendServiceClient;
 import com.douyin.entity.dto.LoginRequest;
 import com.douyin.entity.dto.RegisterRequest;
 import com.douyin.entity.dto.TokenResponse;
@@ -31,13 +32,16 @@ class UserProfileServiceTest {
     @Mock
     private JwtUtils jwtUtils;
 
+    @Mock
+    private RecommendServiceClient recommendServiceClient;
+
     private UserProfileServiceImpl userProfileService;
 
     private UserProfile testUser;
 
     @BeforeEach
     void setUp() {
-        userProfileService = new UserProfileServiceImpl(passwordEncoder, jwtUtils);
+        userProfileService = new UserProfileServiceImpl(passwordEncoder, jwtUtils, recommendServiceClient);
         // 手动设置 baseMapper
         ReflectionTestUtils.setField(userProfileService, "baseMapper", userProfileMapper);
         
@@ -60,6 +64,7 @@ class UserProfileServiceTest {
         when(userProfileMapper.insert(any(UserProfile.class))).thenReturn(1);
         when(jwtUtils.generateToken(any(), anyString())).thenReturn("test-token");
         when(jwtUtils.getExpiration()).thenReturn(3600000L);
+        when(recommendServiceClient.insertUserVector(anyLong(), anyList(), anyList())).thenReturn(true);
 
         TokenResponse response = userProfileService.register(request);
 
@@ -67,6 +72,7 @@ class UserProfileServiceTest {
         assertEquals("test-token", response.getToken());
         verify(userProfileMapper, times(1)).insert(any(UserProfile.class));
         verify(jwtUtils, times(1)).generateToken(any(), anyString());
+        verify(recommendServiceClient, times(1)).insertUserVector(anyLong(), anyList(), anyList());
     }
 
     @Test
