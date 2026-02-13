@@ -21,15 +21,33 @@ class VideoEmbeddingResponse(BaseModel):
     dimension: int
 
 
+class BatchVideoEmbeddingItem(BaseModel):
+    """批量视频向量中的单条视频"""
+    video_id: int = Field(..., description="视频ID")
+    title: str = Field("", description="视频标题")
+    tags: List[str] = Field(default_factory=list, description="视频标签列表")
+    cover_url: Optional[str] = Field(None, description="封面URL")
+    video_url: Optional[str] = Field(None, description="视频URL")
+
+
 class BatchVideoEmbeddingRequest(BaseModel):
     """批量视频向量请求"""
-    video_ids: List[int] = Field(..., description="视频ID列表")
+    videos: Optional[List[BatchVideoEmbeddingItem]] = Field(None, description="批量视频信息")
+    video_ids: Optional[List[int]] = Field(None, description="仅传视频ID（兼容旧格式）")
 
 
 class BatchVideoEmbeddingResponse(BaseModel):
     """批量视频向量响应"""
     embeddings: Dict[int, List[float]]
     count: int
+
+
+class InsertVideoEmbeddingRequest(BaseModel):
+    """插入视频向量请求"""
+    video_id: int = Field(..., description="视频ID")
+    embedding: List[float] = Field(..., description="视频向量 (128维)")
+    author_id: int = Field(..., description="作者ID")
+    created_ts: Optional[int] = Field(None, description="创建时间戳（毫秒）")
 
 
 class UserEventData(BaseModel):

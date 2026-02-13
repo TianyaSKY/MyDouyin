@@ -1,8 +1,10 @@
 from .recommend import (
     VideoEmbeddingRequest,
     VideoEmbeddingResponse,
+    BatchVideoEmbeddingItem,
     BatchVideoEmbeddingRequest,
     BatchVideoEmbeddingResponse,
+    InsertVideoEmbeddingRequest,
     UserEmbeddingRequest,
     UserEmbeddingResponse,
     RankRequest,
@@ -16,8 +18,10 @@ from .recommend import (
 __all__ = [
     "VideoEmbeddingRequest",
     "VideoEmbeddingResponse",
+    "BatchVideoEmbeddingItem",
     "BatchVideoEmbeddingRequest",
     "BatchVideoEmbeddingResponse",
+    "InsertVideoEmbeddingRequest",
     "UserEmbeddingRequest",
     "UserEmbeddingResponse",
     "RankRequest",

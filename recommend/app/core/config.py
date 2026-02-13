@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     BATCH_SIZE: int = 32
     USE_GPU: bool = True
 
+    # 文件上传配置
+    TMPER_UPLOAD_URL: str = "https://tmper.app/upload/"
+
+    # DashScope 多模态向量配置
+    DASHSCOPE_API_KEY: str = ""
+    DASHSCOPE_EMBEDDING_URL: str = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding"
+    DASHSCOPE_MULTIMODAL_MODEL: str = "tongyi-embedding-vision-plus"
+
     @property
     def PORT(self) -> int:
         return self.RECOMMEND_PORT
