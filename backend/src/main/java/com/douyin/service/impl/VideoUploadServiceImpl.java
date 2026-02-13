@@ -49,9 +49,11 @@ public class VideoUploadServiceImpl implements VideoUploadService {
 
     @Override
     public UploadInitResponse initUpload(UploadInitRequest request) {
+        // 1) 校验并标准化 hash；uploadId 由 hash + size + totalChunks 组成，客户端重试可复用。
         String normalizedHash = normalizeAndValidateHash(request.getFileHash());
         String uploadId = buildUploadId(normalizedHash, request.getFileSize(), request.getTotalChunks());
 
+        // 2) 秒传：hash 已存在则直接返回已存储的视频地址，无需继续上传分片。
         FileAsset existing = fileAssetService.getByFileHash(normalizedHash);
         UploadInitResponse response = new UploadInitResponse();
         response.setUploadId(uploadId);
@@ -63,6 +65,7 @@ public class VideoUploadServiceImpl implements VideoUploadService {
         }
 
         response.setInstantUpload(false);
+        // 3) 断点续传：返回服务端已收到的分片索引，客户端只补传缺失分片。
         response.setUploadedChunks(scanUploadedChunks(uploadId));
         return response;
     }
@@ -81,6 +84,7 @@ public class VideoUploadServiceImpl implements VideoUploadService {
         Path chunkPath = uploadDir.resolve(chunkIndex + ".part");
         try {
             Files.createDirectories(uploadDir);
+            // 幂等上传：同 index 分片若大小一致，认为已成功上传，直接返回。
             if (Files.exists(chunkPath) && Files.size(chunkPath) == chunk.getSize()) {
                 return;
             }
@@ -98,6 +102,7 @@ public class VideoUploadServiceImpl implements VideoUploadService {
             throw new RuntimeException("uploadId does not match file metadata");
         }
 
+        // 再次秒传兜底：并发场景下可能在 init 后已有其他请求完成了同 hash 文件。
         FileAsset existing = fileAssetService.getByFileHash(normalizedHash);
         if (existing != null) {
             UploadCompleteResponse response = new UploadCompleteResponse();
@@ -107,10 +112,12 @@ public class VideoUploadServiceImpl implements VideoUploadService {
         }
 
         Path uploadDir = getTempRoot().resolve(request.getUploadId());
+        // 完成阶段先检查分片完整性，避免合并后才发现缺块。
         ensureAllChunksExist(uploadDir, request.getTotalChunks());
 
         Path mergedFile = uploadDir.resolve("merged.tmp");
         try {
+            // 合并并校验：先验 size，再验 hash，确保落盘文件和客户端声明一致。
             mergeChunks(uploadDir, request.getTotalChunks(), mergedFile);
             long mergedSize = Files.size(mergedFile);
             if (mergedSize != request.getFileSize()) {
@@ -132,7 +139,9 @@ public class VideoUploadServiceImpl implements VideoUploadService {
             }
 
             String videoUrl = normalizeUrlPrefix(urlPrefix) + finalName;
+            // 记录 hash->url 映射，后续同文件可直接秒传。
             saveAsset(normalizedHash, request.getFileSize(), request.getFileName(), videoUrl);
+            // 上传会话目录仅用于临时分片存储，完成后清理。
             deleteDirectoryQuietly(uploadDir);
 
             UploadCompleteResponse response = new UploadCompleteResponse();
@@ -187,6 +196,7 @@ public class VideoUploadServiceImpl implements VideoUploadService {
                 StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING,
                 StandardOpenOption.WRITE)) {
+            // 按分片顺序顺序写入，保证最终字节流与原文件一致。
             for (int i = 0; i < totalChunks; i++) {
                 Path chunkPath = uploadDir.resolve(i + ".part");
                 Files.copy(chunkPath, output);
@@ -203,7 +213,7 @@ public class VideoUploadServiceImpl implements VideoUploadService {
         try {
             fileAssetService.save(asset);
         } catch (DuplicateKeyException ex) {
-            // Another request completed first; treat as success.
+            // 并发请求下其他线程可能先写入同 hash 记录，这里按成功处理即可。
         }
     }
 

@@ -2,9 +2,10 @@ import { useState } from "react";
 import SparkMD5 from "spark-md5";
 import { completeUpload, createVideo, initUpload, uploadChunk } from "../api/upload";
 
-const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks
+const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB 分片，兼顾前端内存占用与请求次数
 
 async function calculateFileHash(file) {
+  // 按分片流式计算 MD5，避免一次性读取大文件造成内存峰值过高。
   return new Promise((resolve, reject) => {
     const spark = new SparkMD5.ArrayBuffer();
     const reader = new FileReader();
@@ -52,10 +53,10 @@ export function useUpload({ token, authUser }) {
       const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
       const fileName = file.name;
       
-      // Calculate real MD5 hash
+      // 0) 先计算整文件 hash，用于秒传和完整性校验。
       const fileHash = await calculateFileHash(file);
 
-      // 1. Init
+      // 1) 初始化上传：服务端返回 uploadId、是否秒传、以及已上传分片索引。
       const { uploadId, uploadedChunks = [], videoUrl: existingUrl, instantUpload } = await initUpload(token, {
         fileName,
         fileHash,
@@ -67,7 +68,7 @@ export function useUpload({ token, authUser }) {
       let finalVideoUrl = existingUrl;
 
       if (!instantUpload) {
-        // 2. Upload Chunks
+        // 2) 分片上传：基于 uploadedChunks 做断点续传，只补传缺失分片。
         const uploadedIndices = new Set(uploadedChunks);
         for (let i = 0; i < totalChunks; i++) {
           if (uploadedIndices.has(i)) {
@@ -83,7 +84,7 @@ export function useUpload({ token, authUser }) {
           setProgress(Math.round(((i + 1) / totalChunks) * 100));
         }
 
-        // 3. Complete
+        // 3) 完成上传：通知后端合并分片并做 size/hash 校验，拿到最终 videoUrl。
         const completeData = await completeUpload(token, {
           uploadId,
           fileName,
@@ -94,7 +95,7 @@ export function useUpload({ token, authUser }) {
         finalVideoUrl = completeData.videoUrl;
       }
 
-      // 4. Create Video Entry
+      // 4) 创建视频业务记录（标题/作者/tags/videoUrl），让视频进入内容流转。
       await createVideo(token, {
         authorId: authUser.userId,
         title: title || fileName,

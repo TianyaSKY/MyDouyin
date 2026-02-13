@@ -97,6 +97,44 @@ public class RecommendServiceClient {
     }
 
     /**
+     * 插入视频向量（到 Milvus）
+     */
+    public boolean insertVideoEmbedding(Long videoId, List<Float> embedding, Long authorId, Long createdTs) {
+        try {
+            String url = recommendServiceUrl + "/api/embedding/video/insert";
+
+            Map<String, Object> request = new HashMap<>();
+            request.put("video_id", videoId);
+            request.put("embedding", embedding);
+            request.put("author_id", authorId);
+            request.put("created_ts", createdTs);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<Map> response = restTemplate.postForEntity(
+                    url, entity, Map.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Object success = response.getBody().get("success");
+                if (success instanceof Boolean) {
+                    return (Boolean) success;
+                }
+                return true;
+            }
+
+            log.warn("Failed to insert video embedding for video {}", videoId);
+            return false;
+
+        } catch (Exception e) {
+            log.error("Error inserting video embedding for video {}", videoId, e);
+            return false;
+        }
+    }
+
+    /**
      * 计算用户向量
      */
     public List<Float> calculateUserEmbedding(Long userId, List<Map<String, Object>> recentEvents) {

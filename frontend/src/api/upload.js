@@ -1,7 +1,7 @@
 import { apiFetch } from "./client";
 
 /**
- * Step 1: Initialize multi-part upload
+ * Step 1: 初始化上传会话（秒传判定 + 断点续传状态）
  */
 export async function initUpload(token, { fileName, fileHash, fileSize, totalChunks, chunkSize }) {
   const resp = await apiFetch("/api/videos/upload/init", token, {
@@ -14,7 +14,7 @@ export async function initUpload(token, { fileName, fileHash, fileSize, totalChu
 }
 
 /**
- * Step 2: Upload a single chunk
+ * Step 2: 上传单个分片
  */
 export async function uploadChunk(token, { uploadId, chunkIndex, chunk }) {
   const formData = new FormData();
@@ -23,8 +23,8 @@ export async function uploadChunk(token, { uploadId, chunkIndex, chunk }) {
   const resp = await apiFetch(`/api/videos/upload/chunk?uploadId=${uploadId}&chunkIndex=${chunkIndex}`, token, {
     method: "POST",
     body: formData,
-    // Note: Fetch with FormData should NOT have Content-Type header manually set to application/json
-    // The client.js likely handles headers, I need to check if it forces JSON.
+    // FormData 请求不能手动指定 application/json；
+    // client.js 已在 body 是 FormData 时跳过默认 JSON Content-Type。
   });
   if (!resp.ok) throw new Error(`Chunk ${chunkIndex} upload failed: ${resp.status}`);
   const json = await resp.json();
@@ -32,7 +32,7 @@ export async function uploadChunk(token, { uploadId, chunkIndex, chunk }) {
 }
 
 /**
- * Step 3: Complete upload
+ * Step 3: 通知服务端完成上传（合并 + 完整性校验）
  */
 export async function completeUpload(token, { uploadId, fileName, fileHash, fileSize, totalChunks }) {
   const resp = await apiFetch("/api/videos/upload/complete", token, {
@@ -45,7 +45,7 @@ export async function completeUpload(token, { uploadId, fileName, fileHash, file
 }
 
 /**
- * Step 4: Create video record
+ * Step 4: 创建视频业务记录（绑定最终 videoUrl）
  */
 export async function createVideo(token, { authorId, title, tags, videoUrl, coverUrl }) {
   const resp = await apiFetch("/api/videos", token, {

@@ -296,6 +296,9 @@ class MilvusService:
                 logger.error(f"Invalid embedding dimension for video {video_id}")
                 return False
 
+            # 幂等写入：先删除旧记录，再插入最新向量
+            collection.delete(f"video_id == {video_id}")
+
             # 准备数据
             entities = [[video_id], [embedding], [author_id], [created_ts]]
 

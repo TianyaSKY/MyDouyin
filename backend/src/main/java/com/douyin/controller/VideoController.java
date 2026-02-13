@@ -2,16 +2,19 @@ package com.douyin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.douyin.common.Result;
+import com.douyin.common.config.RabbitMQConfig;
 import com.douyin.entity.dto.UploadCompleteRequest;
 import com.douyin.entity.dto.UploadCompleteResponse;
 import com.douyin.entity.dto.UploadInitRequest;
 import com.douyin.entity.dto.UploadInitResponse;
 import com.douyin.entity.Video;
+import com.douyin.entity.dto.VideoEmbeddingTaskMessage;
 import com.douyin.entity.enums.VideoStatus;
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoUploadService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +27,7 @@ public class VideoController {
 
     private final VideoService videoService;
     private final VideoUploadService videoUploadService;
+    private final RabbitTemplate rabbitTemplate;
 
     /**
      * GET /api/videos/{id} - Get video by ID
@@ -57,12 +61,27 @@ public class VideoController {
     }
 
     /**
-     * POST /api/videos - Create (upload metadata)
+     * POST /api/videos - Create video record
+     * 该接口仅创建视频业务记录（标题、作者、videoUrl 等），
+     * 不负责二进制文件上传；文件上传走 /upload/init|chunk|complete 三段式流程。
      */
     @PostMapping
     public Result<Video> create(@Valid @RequestBody Video video) {
         video.setStatus(VideoStatus.REVIEW); // New videos start as REVIEW
         videoService.save(video);
+
+        VideoEmbeddingTaskMessage message = new VideoEmbeddingTaskMessage();
+        message.setVideoId(video.getId());
+        message.setAuthorId(video.getAuthorId());
+        message.setTitle(video.getTitle());
+        message.setTags(video.getTags());
+        message.setVideoUrl(video.getVideoUrl());
+
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.VIDEO_EMBEDDING_ROUTING_KEY,
+                message
+        );
         return Result.ok(video);
     }
 
@@ -98,7 +117,8 @@ public class VideoController {
     }
 
     /**
-     * POST /api/videos/upload/init - Initialize chunk upload and hash instant upload check
+     * POST /api/videos/upload/init - 初始化上传会话
+     * 流程：校验 fileHash -> 判断是否可秒传 -> 返回 uploadId 和已上传分片列表（用于断点续传）。
      */
     @PostMapping("/upload/init")
     public Result<UploadInitResponse> initUpload(@Valid @RequestBody UploadInitRequest request) {
@@ -106,7 +126,8 @@ public class VideoController {
     }
 
     /**
-     * POST /api/videos/upload/chunk - Upload one chunk
+     * POST /api/videos/upload/chunk - 上传单个分片
+     * 参数：uploadId + chunkIndex + chunk(form-data)。
      */
     @PostMapping(value = "/upload/chunk", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<Void> uploadChunk(@RequestParam String uploadId,
@@ -117,7 +138,8 @@ public class VideoController {
     }
 
     /**
-     * POST /api/videos/upload/complete - Merge chunks and finalize upload
+     * POST /api/videos/upload/complete - 完成上传
+     * 流程：校验 uploadId/size/hash -> 合并分片 -> 落盘 -> 返回可访问 videoUrl。
      */
     @PostMapping("/upload/complete")
     public Result<UploadCompleteResponse> completeUpload(@Valid @RequestBody UploadCompleteRequest request) {
