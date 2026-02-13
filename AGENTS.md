@@ -1,193 +1,121 @@
-# AGENTS.md - 抖音代码库指南
+# AGENTS.md - Douyin 项目协作指南（当前实现版）
 
-本文档为参与抖音（Douyin）项目的 AI 代理和开发人员提供基本指南。
+本文件面向本仓库内的 AI 代理与开发者，约束日常修改行为、运行方式与跨服务联动规则。
 
-## 1. 构建、运行和测试命令
+## 1. 项目结构与职责
 
-### 后端 (Java/Spring Boot)
-- **工作目录:** `backend/`
-- **构建:** `mvn clean install`
-- **运行应用:** `mvn spring-boot:run`
-- **运行所有测试:** `mvn test`
-- **运行单个测试类:** `mvn -Dtest=ClassName test`
-- **运行单个测试方法:** `mvn -Dtest=ClassName#methodName test`
-- **Lint/验证:** `mvn checkstyle:check` (如果已配置) 或依赖 `mvn clean install`
+- `backend/`（Spring Boot, 默认端口 `18081`）
+  - 对外 API、鉴权、视频元数据管理
+  - 分片上传（init/chunk/complete）
+  - Feed 多路召回 + 粗排
+  - 通过 RabbitMQ 异步触发视频 embedding
+- `recommend/`（FastAPI, 默认端口 `18101`）
+  - 视频 embedding 生成（DashScope 多模态）
+  - 本地媒体路径转公网 URL（tmper 上传）
+  - embedding 写入 Milvus
+  - 用户向量计算、向量召回、精排
+- `frontend/`（React + Vite）
+  - 视频上传（分片、断点续传、秒传）
+  - Feed 展示与行为上报
+- `storage/`
+  - 当前本地文件落盘目录（例如 `storage/videos`）
 
-### 推荐服务 (Python/FastAPI)
-- **工作目录:** `recommend/`
-- **安装依赖:** `pip install -r requirements.txt`
-- **运行应用:** `python main.py` 或 `uvicorn app.main:app --host 0.0.0.0 --port 8001`
-- **运行测试:** `pytest` (标准约定，确保已安装 `pytest`)
-- **Lint:** `pylint app/` 或 `flake8 app/`
+## 2. 构建、运行与测试
 
-### 前端 (React)
-- **工作目录:** `frontend/`
-- **安装依赖:** `pnpm install`
-- **运行:** `pnpm dev`
-- **构建:** `pnpm build`
+### 2.1 Backend
 
-### 基础设施
-- **启动所有服务:** `docker-compose up -d`
-- **查看日志:** `docker-compose logs -f [service_name]`
+- 工作目录：`backend/`
+- 构建：`mvn clean install`
+- 运行：`mvn spring-boot:run`
+- 测试：`mvn test`
 
-## 2. 代码风格与规范
+### 2.2 Recommend
 
-### Java (Spring Boot)
-- **格式:** 4 空格缩进。大括号在同一行。
-- **命名:** 类名 `PascalCase`，方法/变量名 `camelCase`，常量 `UPPER_SNAKE_CASE`。
-- **导入:** 推荐显式导入。分组顺序：`java.*` -> 第三方库 -> `com.douyin.*`。
-- **注解:** 使用 Lombok (`@Data`, `@Slf4j`, `@RequiredArgsConstructor`) 减少样板代码。
-- **依赖注入:** 推荐构造器注入 (`@RequiredArgsConstructor` + `final` 字段)。
-- **数据库:** MyBatis-Plus。使用 `LambdaQueryWrapper` 进行类型安全的查询。
-  - 示例: `new LambdaQueryWrapper<Video>().eq(Video::getStatus, VideoStatus.PUBLISHED)`
-- **错误处理:** 使用 `try-catch` 并记录日志 `log.error("msg", e)`。不要默默吞掉异常。
-- **响应:** 返回 `Result<T>` 或特定的 DTO。
+- 工作目录：`recommend/`
+- 安装依赖：`pip install -r requirements.txt`
+- 运行：`python main.py`
+- 可选运行：`uvicorn app.main:app --host 0.0.0.0 --port 18101`
+- 测试：`pytest`
 
-### Python (FastAPI/PyTorch)
-- **格式:** 4 空格缩进。遵循 PEP 8。
-- **类型提示:** 函数参数和返回类型必须使用类型提示。使用 `typing.List`, `typing.Dict` 等。
-  - 示例: `def rank_videos(user_id: int, candidates: List[Dict]) -> List[Dict]:`
-- **文档字符串:** 复杂逻辑使用 Google 风格 (Args/Returns)。
-- **命名:** 类名 `PascalCase`，函数/变量名 `snake_case`。
-- **项目结构:** `app/api` (路由), `app/services` (逻辑), `app/models` (神经网络定义)。
-- **安全:** 推理时使用 `torch.no_grad()`。
-- **解释器：** 使用 `conda Douyin`
+### 2.3 Frontend
 
-## 3. 架构与数据流
+- 工作目录：`frontend/`
+- 安装依赖：`pnpm install`
+- 开发运行：`pnpm dev`
+- 构建：`pnpm build`
 
-### 核心组件
-1.  **后端 (8080):** 业务逻辑、召回 (Redis/标签)、粗排。
-2.  **推荐服务 (8001):** 深度学习、向量生成 (Milvus)、精排 (Wide&Deep)。
-3.  **存储:** MySQL (元数据), Redis (热点/缓存), Milvus (向量), RabbitMQ (异步事件)。
+### 2.4 基础设施
 
-### 推荐流水线
-1.  **召回 (Recall):**
-    - 热门 (Redis ZSET)
-    - 标签 (用户画像标签)
-    - 向量 (Milvus ANN -> `RecommendServiceClient` -> FastAPI)
-2.  **过滤 (Filter):** 去重 & 移除 `user:seen:{id}`。
-3.  **粗排 (Coarse Rank):** 规则排序 (召回分 + 热度分)。
-4.  **精排 (Fine Rank - 可选):** 调用 FastAPI `/api/rank` (Wide & Deep)。
+- 启动：`docker-compose up -d`
+- 查看日志：`docker-compose logs -f [service_name]`
 
-### 关键数据模型 (MySQL)
-- `user_profile`: 用户向量已迁移到 Milvus，不再存储在 MySQL。
-- `video`: `tags` (JSON)。
-- `user_event`: 用户行为日志 (点赞、完播、分享等)。
+## 3. 当前核心数据流（必须理解）
 
-## 4. Agent 操作规则
+### 3.1 视频上传与发布流
 
-- **路径处理:** 文件操作**始终**使用绝对路径。
-- **修改:**
-  - 如果修改 FastAPI 接口，**必须**更新 Java `RecommendServiceClient`。
-  - 如果修改数据库 Schema (`scripts/schema.sql`)，需创建迁移计划。
-- **测试:** 逻辑修改后**始终**运行测试。
-  - Java: `mvn test`
-  - Python: `pytest`
-- **安全:** **绝不**提交密钥 (API keys, 密码)。检查 `application.yml` 和 `.env`。
-- **文档:** 如果架构发生重大变更，请更新 `AGENTS.md`。
+1. 前端计算文件哈希（MD5/SHA-256）。
+2. 调 `POST /api/videos/upload/init` 获取 `uploadId`、`uploadedChunks`、`instantUpload`。
+3. 非秒传时分片上传 `POST /api/videos/upload/chunk`。
+4. 调 `POST /api/videos/upload/complete` 完成合并并校验大小/哈希，返回 `videoUrl`（通常是 `/uploads/videos/...`）。
+5. 调 `POST /api/videos` 写入视频元数据。
+6. backend 发送 `event.video_embedding` MQ 消息。
+7. `VideoEmbeddingConsumer` 消费消息，调用 recommend：
+   - `/api/embedding/video` 生成向量
+   - `/api/embedding/video/insert` 写入 Milvus
+8. 成功后视频状态可从 `REVIEW` 自动切换为 `PUBLISHED`。
 
-## 5. Cursor/Copilot 指令
+### 3.2 本地媒体到公网 URL（DashScope 前置）
 
-- **上下文:** 编辑 `FeedServiceImpl.java` 时，同时也阅读 `RecommendServiceClient.java` 以理解外部依赖。
-- **风格:** 模仿现有的日志模式 (`log.info/error`)。
-- **重构:** 重命名字段时，检查 Java 和 Python 之间的 JSON 序列化 (Jackson/Pydantic) 兼容性。
+- DashScope 多模态 embedding 需要公网可访问 URL。
+- recommend 在 `VideoEmbeddingService` 内对 `cover_url/video_url` 做转换：
+  - 若已是 `http(s)`，直接使用。
+  - 若是本地路径（如 `/uploads/...`），先上传到 `https://tmper.app/upload/` 获取公网 URL。
+- 转换结果使用 Redis 缓存 30 分钟（key 前缀：`recommend:upload:url:`）。
 
-## 6. 后端依赖 (pom.xml)
+## 4. 接口与跨服务契约（高优先级规则）
 
-```xml
-<dependencies>
-    <!-- Spring Boot Starters -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-validation</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-redis</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-amqp</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-security</artifactId>
-    </dependency>
+- 若修改 recommend 接口入参/出参，必须同步检查并更新：
+  - `backend/src/main/java/com/douyin/client/RecommendServiceClient.java`
+- 当前视频 embedding 关键入参：`video_id/title/tags/cover_url/video_url`。
+- 向量维度约束为 128，已在 Pydantic schema 层限制；修改维度需同步：
+  - recommend schema
+  - backend 消费与校验逻辑
+  - Milvus collection 定义与写入逻辑
 
-    <!-- Data Access -->
-    <dependency>
-        <groupId>com.baomidou</groupId>
-        <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
-        <version>${mybatis-plus.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>com.mysql</groupId>
-        <artifactId>mysql-connector-j</artifactId>
-        <scope>runtime</scope>
-    </dependency>
+## 5. 代码风格与实现约束
 
-    <!-- Security -->
-    <dependency>
-        <groupId>io.jsonwebtoken</groupId>
-        <artifactId>jjwt-api</artifactId>
-        <version>${jjwt.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>io.jsonwebtoken</groupId>
-        <artifactId>jjwt-impl</artifactId>
-        <version>${jjwt.version}</version>
-        <scope>runtime</scope>
-    </dependency>
-    <dependency>
-        <groupId>io.jsonwebtoken</groupId>
-        <artifactId>jjwt-jackson</artifactId>
-        <version>${jjwt.version}</version>
-        <scope>runtime</scope>
-    </dependency>
+### 5.1 Java
 
-    <!-- Vector DB -->
-    <dependency>
-        <groupId>io.milvus</groupId>
-        <artifactId>milvus-sdk-java</artifactId>
-        <version>${milvus.version}</version>
-    </dependency>
+- 4 空格缩进，命名遵循 `PascalCase/camelCase/UPPER_SNAKE_CASE`。
+- 优先构造器注入（`@RequiredArgsConstructor` + `final` 字段）。
+- 错误处理不要吞异常，至少记录 `log.error(..., e)`。
 
-    <!-- Development -->
-    <dependency>
-        <groupId>org.projectlombok</groupId>
-        <artifactId>lombok</artifactId>
-        <optional>true</optional>
-    </dependency>
+### 5.2 Python
 
-    <!-- Testing -->
-    <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-test</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>com.h2database</groupId>
-        <artifactId>h2</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-core</artifactId>
-        <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.mockito</groupId>
-        <artifactId>mockito-junit-jupiter</artifactId>
-        <scope>test</scope>
-    </dependency>
-</dependencies>
-```
+- 遵循 PEP 8，类型注解完整。
+- Pydantic v2 优先 `model_dump()`，避免新旧写法混用。
+- 能在 schema 层表达的校验，不重复写在路由层。
+- 避免过度防御样板代码，优先简洁可读。
+
+## 6. 环境变量与安全
+
+- 根目录 `.env` 为主配置来源（recommend 通过 `app/core/config.py` 读取）。
+- 关键变量（按当前实现）：
+  - `RECOMMEND_PORT=18101`
+  - `DASHSCOPE_API_KEY=...`
+  - `DASHSCOPE_EMBEDDING_URL=...`
+  - `DASHSCOPE_MULTIMODAL_MODEL=tongyi-embedding-vision-plus`
+  - `TMPER_UPLOAD_URL=https://tmper.app/upload/`
+  - `REDIS_HOST/REDIS_PORT/REDIS_DB/REDIS_PASSWORD`
+- 严禁提交任何密钥、令牌、密码到仓库。
+
+## 7. Agent 操作规则
+
+- 文件操作使用绝对路径。
+- 做跨服务改动时，先检查调用链再改代码，避免单边修改。
+- 完成逻辑改动后至少执行最小可行校验：
+  - Python：`python -m compileall recommend/app`
+  - Java：`mvn test`（环境允许时）
+- 未经用户明确要求，不要引入大规模重构或目录迁移。
+- 若架构/接口发生实质变化，必须同步更新本文件。
+
