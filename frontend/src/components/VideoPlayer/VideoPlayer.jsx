@@ -1,13 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
 import VideoOverlay from './VideoOverlay';
 import VideoSidebar from './VideoSidebar';
-import { Play, Volume2, VolumeX } from 'lucide-react';
+import VolumeControl from './VolumeControl';
+import { Play } from 'lucide-react';
 import { getMediaUrl } from '../../utils/media';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
 const VideoPlayer = ({ video, isActive }) => {
     const videoRef = useRef(null);
     const [playing, setPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
+    const { track } = useAnalytics();
+
 
     useEffect(() => {
         if (isActive) {
@@ -37,10 +40,21 @@ const VideoPlayer = ({ video, isActive }) => {
         }
     };
 
-    const toggleMute = (e) => {
-        e.stopPropagation();
-        setIsMuted(!isMuted);
+    const handleEnded = () => {
+        // Track finish event
+        track('FINISH', video.id);
+
+        // Manually loop the video
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().then(() => {
+            setPlaying(true);
+        }).catch(err => {
+            console.error("Manual loop failed:", err);
+            setPlaying(false);
+        });
     };
+
+
 
     return (
         <div className="relative w-full h-full bg-black snap-start flex justify-center items-center overflow-hidden">
@@ -48,21 +62,15 @@ const VideoPlayer = ({ video, isActive }) => {
             <video
                 ref={videoRef}
                 onClick={handleVideoPress}
+                onEnded={handleEnded}
                 className="w-full h-full object-cover transition-transform duration-500"
                 src={getMediaUrl(video.videoUrl)}
                 poster={getMediaUrl(video.coverUrl)}
-                loop
                 playsInline
-                muted={isMuted}
             />
 
-            {/* Sound Control - Top Right */}
-            <div
-                className="absolute top-4 right-4 z-30 p-2 bg-black/20 rounded-full backdrop-blur-sm cursor-pointer hover:bg-black/40 transition-colors"
-                onClick={toggleMute}
-            >
-                {isMuted ? <VolumeX size={20} color="white" /> : <Volume2 size={20} color="white" />}
-            </div>
+            {/* Volume Control - Top Right */}
+            <VolumeControl videoRef={videoRef} />
 
             {/* Play/Pause Indicator (optional overlay) */}
             {!playing && (
