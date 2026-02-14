@@ -37,7 +37,7 @@ public class MilvusServiceImpl implements IMilvusService {
             // 构建搜索参数
             SearchParam searchParam = SearchParam.newBuilder()
                 .withCollectionName(COLLECTION_NAME)
-                .withMetricType(io.milvus.param.MetricType.L2)
+                .withMetricType(io.milvus.param.MetricType.COSINE)
                 .withOutFields(Collections.singletonList("video_id"))
                 .withTopK(topK)
                 .withVectors(Collections.singletonList(userVector))
