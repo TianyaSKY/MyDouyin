@@ -79,8 +79,6 @@ public class UserEventController {
                 RabbitMQConfig.ROUTING_KEY,
                 event
         );
-        // We can't return the saved ID immediately if it's async,
-        // but for frontend purposes, returning the input object is usually fine.
         return Result.ok(event);
     }
 
