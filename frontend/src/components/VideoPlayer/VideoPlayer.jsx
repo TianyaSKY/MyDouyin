@@ -9,6 +9,7 @@ import { useAnalytics } from '../../hooks/useAnalytics';
 const VideoPlayer = ({ video, isActive }) => {
     const videoRef = useRef(null);
     const [playing, setPlaying] = useState(false);
+    const [fitMode, setFitMode] = useState('contain'); // 'contain' or 'cover'
     const { track } = useAnalytics();
 
 
@@ -54,16 +55,28 @@ const VideoPlayer = ({ video, isActive }) => {
         });
     };
 
+    const toggleFitMode = () => {
+        setFitMode(prev => prev === 'contain' ? 'cover' : 'contain');
+    };
 
 
     return (
         <div className="relative w-full h-full bg-black snap-start flex justify-center items-center overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20 pointer-events-none z-[1]" />
+            {/* Background Layer for 'contain' mode to provide blur effect */}
+            {fitMode === 'contain' && (
+                <div
+                    className="absolute inset-0 z-0 opacity-50 bg-cover bg-center scale-110 blur-2xl transition-opacity duration-700"
+                    style={{ backgroundImage: `url(${getMediaUrl(video.coverUrl)})` }}
+                />
+            )}
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none z-[1]" />
+
             <video
                 ref={videoRef}
                 onClick={handleVideoPress}
                 onEnded={handleEnded}
-                className="w-full h-full object-cover transition-transform duration-500"
+                className={`w-full h-full relative z-[1] transition-all duration-300 ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}`}
                 src={getMediaUrl(video.videoUrl)}
                 poster={getMediaUrl(video.coverUrl)}
                 playsInline
@@ -82,7 +95,11 @@ const VideoPlayer = ({ video, isActive }) => {
             )}
 
             <VideoOverlay video={video} />
-            <VideoSidebar video={video} />
+            <VideoSidebar
+                video={video}
+                onToggleFit={toggleFitMode}
+                fitMode={fitMode}
+            />
         </div>
     );
 };

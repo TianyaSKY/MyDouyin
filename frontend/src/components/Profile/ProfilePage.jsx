@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { getAuthorVideos } from '../../api/video';
 import { getUserStats } from '../../api/user';
@@ -39,31 +39,61 @@ const ProfilePage = () => {
     const [videos, setVideos] = useState([]);
     const [stats, setStats] = useState({ totalLikes: 0, workCount: 0, followingCount: 0, followerCount: 0 });
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
     const [activeTab, setActiveTab] = useState('works'); // works, likes, private
+    const observer = useRef();
+
+    const fetchVideos = async (pageNum) => {
+        if (!user?.userId) return;
+        try {
+            setLoading(true);
+            const data = await getAuthorVideos(token, user.userId, pageNum, 18);
+            if (data.records && data.records.length > 0) {
+                setVideos(prev => pageNum === 1 ? data.records : [...prev, ...data.records]);
+                setHasMore(data.records.length === 18);
+            } else {
+                setHasMore(false);
+            }
+        } catch (err) {
+            console.error("Failed to fetch videos", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchStats = async () => {
+        if (!user?.userId) return;
+        try {
+            const statsData = await getUserStats(token, user.userId);
+            setStats(statsData);
+        } catch (err) {
+            console.error("Failed to fetch stats", err);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            if (user?.userId) {
-                try {
-                    setLoading(true);
-                    const [videosData, statsData] = await Promise.all([
-                        getAuthorVideos(token, user.userId),
-                        getUserStats(token, user.userId)
-                    ]);
-                    setVideos(videosData.records || []);
-                    setStats(statsData);
-                } catch (err) {
-                    console.error("Failed to fetch profile data", err);
-                } finally {
-                    setLoading(false);
-                }
-            }
-        };
-
         if (user) {
-            fetchData();
+            fetchVideos(1);
+            fetchStats();
+            setPage(1);
         }
     }, [user, token]);
+
+    const lastVideoRef = useCallback(node => {
+        if (loading) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && hasMore) {
+                setPage(prevPage => {
+                    const nextPage = prevPage + 1;
+                    fetchVideos(nextPage);
+                    return nextPage;
+                });
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [loading, hasMore]);
 
     if (!user) {
         return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
@@ -71,7 +101,7 @@ const ProfilePage = () => {
     if (loading && videos.length === 0) return <ProfileSkeleton />;
 
     return (
-        <div className="min-h-screen bg-black text-white pb-20 overflow-y-auto no-scrollbar">
+        <div className="h-screen bg-black text-white pb-20 overflow-y-auto custom-scrollbar">
             {/* Header / Banner */}
             <div className="relative h-32 bg-gray-800">
                 {/* Optional: User Cover Image */}
@@ -129,7 +159,7 @@ const ProfilePage = () => {
                     onClick={() => setActiveTab('works')}
                     className={`pb-3 text-sm font-medium relative ${activeTab === 'works' ? 'text-white' : 'text-gray-500'}`}
                 >
-                    作品 {videos.length > 0 && videos.length}
+                    作品 {stats.workCount > 0 ? stats.workCount : (videos.length > 0 ? videos.length : '')}
                     {activeTab === 'works' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-yellow-400 rounded-full"></div>}
                 </button>
                 <button
@@ -155,8 +185,10 @@ const ProfilePage = () => {
             <div className="grid grid-cols-3 gap-[1px] mt-[1px]">
                 {activeTab === 'works' ? (
                     videos.length > 0 ? (
-                        videos.map(video => (
-                            <VideoGridItem key={video.id} video={video} />
+                        videos.map((video, index) => (
+                            <div key={video.id} ref={index === videos.length - 1 ? lastVideoRef : null}>
+                                <VideoGridItem video={video} />
+                            </div>
                         ))
                     ) : (
                         <div className="col-span-3 py-20 text-center text-gray-500 text-sm">
@@ -166,6 +198,11 @@ const ProfilePage = () => {
                 ) : (
                     <div className="col-span-3 py-20 text-center text-gray-500 text-sm">
                         {activeTab === 'private' ? '私密视频仅自己可见' : '喜欢的视频仅自己可见'}
+                    </div>
+                )}
+                {loading && videos.length > 0 && (
+                    <div className="col-span-3 py-4 text-center text-gray-500 text-xs">
+                        加载中...
                     </div>
                 )}
             </div>

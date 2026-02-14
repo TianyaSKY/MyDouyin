@@ -46,6 +46,21 @@ const VideoFeed = () => {
         }
     }, [user, videos.length, loadMoreVideos]);
 
+    // Update document title based on current video
+    useEffect(() => {
+        if (videos.length > 0 && videos[currentVideoIndex]) {
+            const currentVideo = videos[currentVideoIndex];
+            document.title = `${currentVideo.title || '视频'} - Douyin`;
+        } else {
+            document.title = 'Douyin';
+        }
+
+        // Optional: Reset title on unmount
+        return () => {
+            document.title = 'Douyin';
+        };
+    }, [videos, currentVideoIndex]);
+
     // Intersection Observer to update current video index
     const lastVideoRef = useCallback(node => {
         if (loading) return;

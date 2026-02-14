@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Share2, Plus, Check } from 'lucide-react';
+import { Heart, Share2, Plus, Check, Maximize2, Minimize2 } from 'lucide-react';
 import { likeVideo, unlikeVideo } from '../../api/video';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import avatarImg from '../../resource/avatar.jpg';
 
-const VideoSidebar = ({ video }) => {
+const VideoSidebar = ({ video, onToggleFit, fitMode }) => {
     const { token, user } = useAuthContext();
     const { track } = useAnalytics();
     const [liked, setLiked] = useState(video.isLiked || false); // Default from prop
@@ -48,9 +48,9 @@ const VideoSidebar = ({ video }) => {
     };
 
     return (
-        <div className="absolute right-2 bottom-24 flex flex-col items-center space-y-6 z-10 pointer-events-auto">
+        <div className="absolute right-2 bottom-24 flex flex-col items-center space-y-5 z-10 pointer-events-auto">
             {/* Avatar */}
-            <div className="relative group cursor-pointer">
+            <div className="relative group cursor-pointer mb-2">
                 <div className="w-12 h-12 rounded-full border border-white/50 overflow-hidden bg-gray-800 transition-transform group-hover:scale-105">
                     <img
                         src={avatarImg}
@@ -70,6 +70,14 @@ const VideoSidebar = ({ video }) => {
                     <Heart size={32} fill={liked ? "currentColor" : "none"} strokeWidth={liked ? 0 : 2} className={`filter drop-shadow-lg ${liked ? 'animate-heart-pop' : ''}`} />
                 </div>
                 <span className="text-white text-xs font-medium drop-shadow-md mt-1">{likeCount}</span>
+            </div>
+
+            {/* Aspect Ratio Toggle */}
+            <div className="flex flex-col items-center cursor-pointer group" onClick={onToggleFit}>
+                <div className="p-2 rounded-full text-white bg-black/20 hover:bg-black/40 transition-all duration-200 active:scale-75">
+                    {fitMode === 'contain' ? <Maximize2 size={28} strokeWidth={2} /> : <Minimize2 size={28} strokeWidth={2} />}
+                </div>
+                <span className="text-white text-[10px] font-medium drop-shadow-md mt-1">{fitMode === 'contain' ? '填充' : '比例'}</span>
             </div>
 
             {/* Share */}
