@@ -105,6 +105,9 @@ class FeedServiceTest {
         // Mock已看视频集合
         when(setOperations.members(anyString())).thenReturn(new HashSet<>());
 
+        // Mock总视频数 (用于 hasMore 计算)
+        when(videoService.count(any(Wrapper.class))).thenReturn(100L);
+
         // Mock视频统计
         VideoStatsDaily stats = new VideoStatsDaily();
         stats.setVideoId(1L);
@@ -145,6 +148,9 @@ class FeedServiceTest {
         // Mock已看视频集合
         when(setOperations.members(anyString())).thenReturn(new HashSet<>());
 
+        // Mock总视频数
+        when(videoService.count(any(Wrapper.class))).thenReturn(100L);
+
         FeedResponse response = feedService.generateFeed(userId, size);
 
         assertNotNull(response);
@@ -156,16 +162,21 @@ class FeedServiceTest {
         Long userId = 1L;
         int size = 10;
 
-        // Mock热门视频
+        // Mock热门视频 — 包含视频1和视频2
         Set<ZSetOperations.TypedTuple<Object>> hotVideos = new HashSet<>();
         ZSetOperations.TypedTuple<Object> tuple1 = mock(ZSetOperations.TypedTuple.class);
         when(tuple1.getValue()).thenReturn("1");
         when(tuple1.getScore()).thenReturn(100.0);
+        ZSetOperations.TypedTuple<Object> tuple2 = mock(ZSetOperations.TypedTuple.class);
+        when(tuple2.getValue()).thenReturn("2");
+        when(tuple2.getScore()).thenReturn(80.0);
         hotVideos.add(tuple1);
+        hotVideos.add(tuple2);
 
         when(zSetOperations.reverseRangeWithScores(anyString(), anyLong(), anyLong()))
             .thenReturn(hotVideos);
-        when(videoService.listByIds(anyList())).thenReturn(Arrays.asList(testVideo1));
+        // 只有视频2没被 seen 过滤，所以只会查询视频2
+        when(videoService.listByIds(anyList())).thenReturn(Arrays.asList(testVideo2));
 
         // Mock向量召回
         when(userEmbeddingService.getFusedVector(userId, 0.7))
@@ -178,10 +189,13 @@ class FeedServiceTest {
         seenIds.add("1");
         when(setOperations.members(anyString())).thenReturn(seenIds);
 
+        // Mock总视频数
+        when(videoService.count(any(Wrapper.class))).thenReturn(100L);
+
         FeedResponse response = feedService.generateFeed(userId, size);
 
         assertNotNull(response);
-        // 视频1应该被过滤掉
+        // 视频1应该被过滤掉（在召回阶段就排除了）
         assertTrue(response.getVideos().stream().noneMatch(v -> v.getId().equals(1L)));
     }
 
@@ -209,10 +223,12 @@ class FeedServiceTest {
         // Mock已看视频集合
         when(setOperations.members(anyString())).thenReturn(new HashSet<>());
 
+        // Mock总视频数
+        when(videoService.count(any(Wrapper.class))).thenReturn(100L);
+
         FeedResponse response = feedService.generateFeed(userId, size);
 
         assertNotNull(response);
         assertNotNull(response.getVideos());
     }
 }
-
