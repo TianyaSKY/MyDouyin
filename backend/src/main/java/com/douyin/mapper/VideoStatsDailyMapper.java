@@ -5,6 +5,7 @@ import com.douyin.entity.VideoStatsDaily;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -15,7 +16,7 @@ public interface VideoStatsDailyMapper extends BaseMapper<VideoStatsDaily> {
     /**
      * Atomic Upsert (MySQL Specific)
      */
-    @Select("INSERT INTO video_stats_daily (video_id, date, impr_cnt, click_cnt, like_cnt, finish_cnt, share_cnt, watch_time_sum) " +
+    @Update("INSERT INTO video_stats_daily (video_id, date, impr_cnt, click_cnt, like_cnt, finish_cnt, share_cnt, watch_time_sum) " +
             "VALUES (#{videoId}, #{date}, #{impr}, #{click}, #{like}, #{finish}, #{share}, #{watchMs}) " +
             "ON DUPLICATE KEY UPDATE " +
             "impr_cnt = impr_cnt + #{impr}, " +

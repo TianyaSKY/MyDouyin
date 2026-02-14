@@ -12,17 +12,26 @@ import com.douyin.entity.dto.CreateVideoRequest;
 import com.douyin.entity.Video;
 import com.douyin.entity.dto.VideoEmbeddingTaskMessage;
 import com.douyin.entity.enums.VideoStatus;
+import com.douyin.entity.UserEvent;
+import com.douyin.entity.enums.EventType;
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoUploadService;
+import com.douyin.service.UserVideoActionService;
+import com.douyin.service.security.JwtUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/videos")
@@ -33,6 +42,7 @@ public class VideoController {
     private final VideoUploadService videoUploadService;
     private final RabbitTemplate rabbitTemplate;
     private final MediaUrlResolver mediaUrlResolver;
+    private final UserVideoActionService userVideoActionService;
 
     /**
      * GET /api/videos/{id} - Get video by ID
@@ -155,6 +165,58 @@ public class VideoController {
     }
 
     /**
+     * POST /api/videos/{id}/like - 点赞（幂等）
+     */
+    @PostMapping("/{id}/like")
+    public Result<Map<String, Object>> likeVideo(@PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return Result.fail(401, "未登录");
+        }
+
+        boolean changed = userVideoActionService.likeVideo(userId, id);
+        if (!changed) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("liked", true);
+            data.put("alreadyLiked", true);
+            return Result.ok(data);
+        }
+
+        UserEvent likeEvent = new UserEvent();
+        likeEvent.setUserId(userId);
+        likeEvent.setVideoId(id);
+        likeEvent.setEventType(EventType.LIKE);
+        likeEvent.setTs(LocalDateTime.now());
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY,
+                likeEvent
+        );
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("liked", true);
+        data.put("alreadyLiked", false);
+        return Result.ok(data);
+    }
+
+    /**
+     * DELETE /api/videos/{id}/like - 取消点赞（幂等）
+     */
+    @DeleteMapping("/{id}/like")
+    public Result<Map<String, Object>> unlikeVideo(@PathVariable Long id) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return Result.fail(401, "未登录");
+        }
+
+        userVideoActionService.unlikeVideo(userId, id);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("liked", false);
+        return Result.ok(data);
+    }
+
+    /**
      * POST /api/videos/upload/init - 初始化上传会话
      * 流程：校验 fileHash -> 判断是否可秒传 -> 返回 uploadId 和已上传分片列表（用于断点续传）。
      */
@@ -211,5 +273,17 @@ public class VideoController {
         }
         video.setCoverUrl(mediaUrlResolver.toPublicUrl(video.getCoverUrl()));
         video.setVideoUrl(mediaUrlResolver.toPublicUrl(video.getVideoUrl()));
+    }
+
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof JwtUserDetails jwtUserDetails) {
+            return jwtUserDetails.getUserId();
+        }
+        return null;
     }
 }

@@ -56,6 +56,22 @@ CREATE TABLE IF NOT EXISTS user_event (
 ) COMMENT '用户行为日志表';
 
 -- 5. File Asset (for hash instant upload)
+-- 5. User-Video Action State (source of truth for idempotent like/share/follow actions)
+CREATE TABLE IF NOT EXISTS user_video_action (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    video_id BIGINT NOT NULL COMMENT '视频ID',
+    action_type ENUM('like', 'favorite') NOT NULL COMMENT '行为类型',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态(1:生效, 0:取消)',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY uk_user_video_action (user_id, video_id, action_type),
+    INDEX idx_user_action_status (user_id, action_type, status),
+    INDEX idx_video_action_status (video_id, action_type, status),
+    INDEX idx_updated_at (updated_at)
+) COMMENT '用户-视频行为状态表(幂等真相表)';
+
+-- 6. File Asset (for hash instant upload)
 CREATE TABLE IF NOT EXISTS file_asset (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     file_hash VARCHAR(64) NOT NULL COMMENT '文件哈希值(MD5/SHA-256)',

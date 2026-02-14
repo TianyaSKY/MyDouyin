@@ -21,11 +21,6 @@ const VideoSidebar = ({ video }) => {
         setLiked(newLiked);
         setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
 
-        // Track event
-        if (newLiked) {
-            track('LIKE', video.id);
-        }
-
         try {
             if (newLiked) {
                 await likeVideo(token, video.id);

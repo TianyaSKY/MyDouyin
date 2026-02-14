@@ -37,6 +37,9 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
 
     @Override
     public void incrementStats(Long videoId, EventType eventType, int watchMs) {
+        if (videoId == null || eventType == null) {
+            return;
+        }
         LocalDate today = LocalDate.now();
 
         long impr = eventType == EventType.IMPR ? 1 : 0;
@@ -45,6 +48,7 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
         long finish = eventType == EventType.FINISH ? 1 : 0;
         long share = eventType == EventType.SHARE ? 1 : 0;
 
+        baseMapper.upsertStats(videoId, today, impr, click, like, finish, share, watchMs);
     }
 
     @Override
