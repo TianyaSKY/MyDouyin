@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
         setCheckingAuth(false);
         return;
       }
-      
+
       try {
         const userData = await me(token);
         setUser(userData);
@@ -47,10 +47,12 @@ export const AuthProvider = ({ children }) => {
     verifyAuth();
   }, [token]);
 
+
+
   const handleLogin = useCallback(async (username, password) => {
     setLoading(true);
     setError('');
-    
+
     try {
       const data = await login(username, password);
       localStorage.setItem('douyin_token', data.token);
@@ -71,7 +73,7 @@ export const AuthProvider = ({ children }) => {
   const handleRegister = useCallback(async (username, password, nickname) => {
     setLoading(true);
     setError('');
-    
+
     try {
       const data = await register(username, password, nickname);
       localStorage.setItem('douyin_token', data.token);
@@ -96,6 +98,18 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setError('');
   }, []);
+
+  // Listen for unauthorized events (401)
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      handleLogout();
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, [handleLogout]);
 
   const clearError = useCallback(() => {
     setError('');

@@ -16,6 +16,7 @@ const UploadModal = ({ isOpen, onClose }) => {
     const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [tags, setTags] = useState(''); // New state for tags
     const [coverFile, setCoverFile] = useState(null);
     const [coverPreview, setCoverPreview] = useState(null);
     const [visibility, setVisibility] = useState('public'); // public, private
@@ -126,6 +127,11 @@ const UploadModal = ({ isOpen, onClose }) => {
             return;
         }
 
+        if (!coverFile) {
+            setErrorMsg('请上传封面图片');
+            return;
+        }
+
         try {
             setStatus('hashing');
             const fileHash = await calculateHash(file);
@@ -179,12 +185,13 @@ const UploadModal = ({ isOpen, onClose }) => {
             }
 
             // 5. Create Record
+            const tagList = tags.split(/[\s,，]+/).filter(t => t.trim());
             await createVideo(token, {
                 authorId: user.userId,
                 title: title,
                 videoUrl: completeData.videoUrl,
                 coverUrl: finalCoverUrl,
-                tags: [] // Future: parse tags from description
+                tags: tagList
             });
 
             setStatus('success');
@@ -204,8 +211,10 @@ const UploadModal = ({ isOpen, onClose }) => {
     const reset = () => {
         setFile(null);
         setVideoPreviewUrl(null);
+        setVideoPreviewUrl(null);
         setTitle('');
         setDescription('');
+        setTags('');
         setCoverFile(null);
         setCoverPreview(null);
         setStatus('idle');
@@ -292,7 +301,9 @@ const UploadModal = ({ isOpen, onClose }) => {
                                 </div>
 
                                 <div className="mt-6 w-full">
-                                    <label className="text-xs text-gray-400 mb-2 block">设置封面</label>
+                                    <label className="text-xs text-gray-400 mb-2 block">
+                                        设置封面 <span className="text-red-500">*</span>
+                                    </label>
                                     <div
                                         onClick={() => coverInputRef.current?.click()}
                                         className="w-full aspect-video bg-gray-800 rounded-lg border border-dashed border-gray-700 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-700 transition-colors relative overflow-hidden group"
@@ -362,6 +373,23 @@ const UploadModal = ({ isOpen, onClose }) => {
                                         </div>
                                     </div>
 
+                                    {/* Tags */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-white mb-2">标签</label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Hash size={16} className="text-gray-500" />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={tags}
+                                                onChange={(e) => setTags(e.target.value)}
+                                                className="w-full bg-[#252836] border border-gray-700 rounded-md py-3 pl-10 pr-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-gray-500"
+                                                placeholder="输入标签，用空格或逗号分隔..."
+                                            />
+                                        </div>
+                                    </div>
+
                                     {/* Visibility / Settings */}
                                     <div>
                                         <label className="block text-sm font-medium text-white mb-2">发布设置</label>
@@ -369,8 +397,8 @@ const UploadModal = ({ isOpen, onClose }) => {
                                             <button
                                                 onClick={() => setVisibility('public')}
                                                 className={`flex items-center px-4 py-2 rounded-md text-sm border transition-colors ${visibility === 'public'
-                                                        ? 'bg-gray-800 border-blue-500 text-blue-400'
-                                                        : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-600'
+                                                    ? 'bg-gray-800 border-blue-500 text-blue-400'
+                                                    : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-600'
                                                     }`}
                                             >
                                                 <Globe size={16} className="mr-2" /> 公开 · 所有人可见
@@ -378,8 +406,8 @@ const UploadModal = ({ isOpen, onClose }) => {
                                             <button
                                                 onClick={() => setVisibility('private')}
                                                 className={`flex items-center px-4 py-2 rounded-md text-sm border transition-colors ${visibility === 'private'
-                                                        ? 'bg-gray-800 border-blue-500 text-blue-400'
-                                                        : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-600'
+                                                    ? 'bg-gray-800 border-blue-500 text-blue-400'
+                                                    : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-600'
                                                     }`}
                                             >
                                                 <Lock size={16} className="mr-2" /> 私密 · 仅自己可见

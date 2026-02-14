@@ -55,7 +55,6 @@ CREATE TABLE IF NOT EXISTS user_event (
     INDEX idx_ts (ts)
 ) COMMENT '用户行为日志表';
 
--- 5. File Asset (for hash instant upload)
 -- 5. User-Video Action State (source of truth for idempotent like/share/follow actions)
 CREATE TABLE IF NOT EXISTS user_video_action (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',

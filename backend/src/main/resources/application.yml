@@ -31,7 +31,7 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
     default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
   global-config:
     db-config:
@@ -40,6 +40,12 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
   type-aliases-package: com.douyin.entity
+
+logging:
+  level:
+    org.mybatis: WARN
+    com.baomidou.mybatisplus: WARN
+    org.springframework.jdbc: WARN
 
 # JWT Configuration
 jwt:

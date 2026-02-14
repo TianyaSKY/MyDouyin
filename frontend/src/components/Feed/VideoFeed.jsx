@@ -13,7 +13,7 @@ const VideoFeed = () => {
     const [hasMore, setHasMore] = useState(true);
 
     const loadMoreVideos = useCallback(async () => {
-        if (loading || !hasMore) return;
+        if (loading || !hasMore || !user) return;
         setLoading(true);
         try {
             // Pass the current user ID to get personalized feed
@@ -29,12 +29,15 @@ const VideoFeed = () => {
         } finally {
             setLoading(false);
         }
-    }, [token, user.userId, loading, hasMore]);
+    }, [token, user?.userId, loading, hasMore]);
 
 
+    // Load videos when user is ready
     useEffect(() => {
-        loadMoreVideos();
-    }, []); // Initial load
+        if (user && videos.length === 0) {
+            loadMoreVideos();
+        }
+    }, [user, videos.length, loadMoreVideos]);
 
     // Intersection Observer to update current video index
     const lastVideoRef = useCallback(node => {

@@ -6,6 +6,7 @@ import { getUserStats } from '../../api/user';
 import { ProfileSkeleton } from '../Common/Skeleton';
 import { Lock, Menu, Copy, Play } from 'lucide-react';
 import { getCoverUrl } from '../../utils/media';
+import avatarImg from '../../resource/avatar.jpg';
 
 const VideoGridItem = ({ video }) => {
     const [imgError, setImgError] = useState(false);
@@ -58,10 +59,15 @@ const ProfilePage = () => {
                 }
             }
         };
-        fetchData();
+
+        if (user) {
+            fetchData();
+        }
     }, [user, token]);
 
-    if (!user) return null;
+    if (!user) {
+        return <div className="min-h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
+    }
     if (loading && videos.length === 0) return <ProfileSkeleton />;
 
     return (
@@ -80,7 +86,7 @@ const ProfilePage = () => {
                 <div className="flex flex-col items-start">
                     <div className="w-24 h-24 rounded-full border-4 border-black bg-gray-700 overflow-hidden mb-3">
                         <img
-                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.userId}`}
+                            src={avatarImg}
                             alt="avatar"
                             className="w-full h-full object-cover"
                         />

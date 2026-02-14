@@ -1,12 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import VideoOverlay from './VideoOverlay';
 import VideoSidebar from './VideoSidebar';
-import { Play } from 'lucide-react';
+import { Play, Volume2, VolumeX } from 'lucide-react';
 import { getMediaUrl } from '../../utils/media';
 
 const VideoPlayer = ({ video, isActive }) => {
     const videoRef = useRef(null);
     const [playing, setPlaying] = useState(false);
+    const [isMuted, setIsMuted] = useState(false);
 
     useEffect(() => {
         if (isActive) {
@@ -36,6 +37,11 @@ const VideoPlayer = ({ video, isActive }) => {
         }
     };
 
+    const toggleMute = (e) => {
+        e.stopPropagation();
+        setIsMuted(!isMuted);
+    };
+
     return (
         <div className="relative w-full h-full bg-black snap-start flex justify-center items-center overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20 pointer-events-none z-[1]" />
@@ -47,8 +53,16 @@ const VideoPlayer = ({ video, isActive }) => {
                 poster={getMediaUrl(video.coverUrl)}
                 loop
                 playsInline
-                muted // Muted for autoplay
+                muted={isMuted}
             />
+
+            {/* Sound Control - Top Right */}
+            <div
+                className="absolute top-4 right-4 z-30 p-2 bg-black/20 rounded-full backdrop-blur-sm cursor-pointer hover:bg-black/40 transition-colors"
+                onClick={toggleMute}
+            >
+                {isMuted ? <VolumeX size={20} color="white" /> : <Volume2 size={20} color="white" />}
+            </div>
 
             {/* Play/Pause Indicator (optional overlay) */}
             {!playing && (

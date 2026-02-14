@@ -3,17 +3,19 @@ import { Heart, Share2, Plus, Check } from 'lucide-react';
 import { likeVideo, unlikeVideo } from '../../api/video';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import avatarImg from '../../resource/avatar.jpg';
 
 const VideoSidebar = ({ video }) => {
     const { token, user } = useAuthContext();
     const { track } = useAnalytics();
-    const [liked, setLiked] = useState(false); // Default false
+    const [liked, setLiked] = useState(video.isLiked || false); // Default from prop
     const [likeCount, setLikeCount] = useState(video.likeCount || 0);
     const [copied, setCopied] = useState(false);
 
     // Sync with props
     useEffect(() => {
         setLikeCount(video.likeCount || 0);
+        setLiked(video.isLiked || false);
     }, [video]);
 
     const handleLike = async () => {
@@ -51,7 +53,7 @@ const VideoSidebar = ({ video }) => {
             <div className="relative group cursor-pointer">
                 <div className="w-12 h-12 rounded-full border border-white/50 overflow-hidden bg-gray-800 transition-transform group-hover:scale-105">
                     <img
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${video.authorId}`}
+                        src={avatarImg}
                         alt="Avatar"
                         className="w-full h-full object-cover"
                     />
@@ -82,7 +84,7 @@ const VideoSidebar = ({ video }) => {
             <div className="relative mt-4 animate-spin-slow-linear">
                 <div className="w-10 h-10 bg-gray-800 rounded-full border-[6px] border-gray-900 overflow-hidden flex items-center justify-center">
                     <img
-                        src={`https://api.dicebear.com/7.x/identicon/svg?seed=${video.authorId}`}
+                        src={avatarImg}
                         className="w-6 h-6 rounded-full"
                     />
                 </div>
