@@ -37,11 +37,12 @@ const VideoPlayer = ({ video, isActive }) => {
     };
 
     return (
-        <div className="relative w-full h-full bg-black snap-start flex justify-center items-center">
+        <div className="relative w-full h-full bg-black snap-start flex justify-center items-center overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/20 pointer-events-none z-[1]" />
             <video
                 ref={videoRef}
                 onClick={handleVideoPress}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-500"
                 src={getMediaUrl(video.videoUrl)}
                 poster={getMediaUrl(video.coverUrl)}
                 loop
@@ -51,9 +52,9 @@ const VideoPlayer = ({ video, isActive }) => {
 
             {/* Play/Pause Indicator (optional overlay) */}
             {!playing && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="bg-black/30 rounded-full p-4 backdrop-blur-sm">
-                        <Play size={48} fill="white" className="text-white ml-2" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                    <div className="bg-black/35 border border-white/30 rounded-full p-4 backdrop-blur-md shadow-[0_12px_28px_rgba(0,0,0,0.45)]">
+                        <Play size={44} fill="white" className="text-white ml-1" />
                     </div>
                 </div>
             )}

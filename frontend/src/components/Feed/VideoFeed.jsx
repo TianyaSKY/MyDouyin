@@ -60,7 +60,7 @@ const VideoFeed = () => {
 
     return (
         <div
-            className="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-black"
+            className="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar feed-atmosphere"
             onScroll={handleScroll}
         >
             {videos.map((video, index) => (
@@ -79,6 +79,12 @@ const VideoFeed = () => {
             {loading && videos.length === 0 && (
                 <div className="h-full w-full snap-start">
                     <VideoSkeleton />
+                </div>
+            )}
+
+            {loading && videos.length > 0 && (
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 px-3 py-1.5 rounded-full bg-black/50 border border-white/10 backdrop-blur-sm text-xs text-white/90">
+                    正在加载更多...
                 </div>
             )}
         </div>
