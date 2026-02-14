@@ -1,55 +1,96 @@
-import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, Share2, Plus, Check } from 'lucide-react';
+import { likeVideo, unlikeVideo } from '../../api/video';
+import { useAuthContext } from '../../contexts/AuthContext';
+import { useAnalytics } from '../../hooks/useAnalytics';
 
-const VideoSidebar = ({ video, onLike, onComment, onShare }) => {
-    const [liked, setLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 1000)); // Placeholder
+const VideoSidebar = ({ video }) => {
+    const { token, user } = useAuthContext();
+    const { track } = useAnalytics();
+    const [liked, setLiked] = useState(false); // Default false
+    const [likeCount, setLikeCount] = useState(video.likeCount || 0);
+    const [copied, setCopied] = useState(false);
 
-    const handleLike = () => {
-        setLiked(!liked);
-        setLikeCount(c => liked ? c - 1 : c + 1);
-        if (onLike) onLike();
+    // Sync with props
+    useEffect(() => {
+        setLikeCount(video.likeCount || 0);
+    }, [video]);
+
+    const handleLike = async () => {
+        const newLiked = !liked;
+        setLiked(newLiked);
+        setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
+
+        // Track event
+        if (newLiked) {
+            track('LIKE', video.id);
+        }
+
+        try {
+            if (newLiked) {
+                await likeVideo(token, video.id);
+            } else {
+                await unlikeVideo(token, video.id);
+            }
+        } catch (error) {
+            console.error("Like operation failed", error);
+            setLiked(!newLiked);
+            setLikeCount(prev => newLiked ? prev - 1 : prev + 1);
+        }
+    };
+
+    const handleShare = async () => {
+        track('SHARE', video.id);
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy!', err);
+        }
     };
 
     return (
-        <div className="absolute right-2 bottom-20 flex flex-col items-center space-y-6 z-10">
+        <div className="absolute right-2 bottom-24 flex flex-col items-center space-y-6 z-10 pointer-events-auto">
             {/* Avatar */}
-            <div className="relative">
-                <div className="w-12 h-12 rounded-full border-2 border-white overflow-hidden bg-gray-600">
-                    {/* Placeholder avatar */}
+            <div className="relative group cursor-pointer">
+                <div className="w-12 h-12 rounded-full border border-white/50 overflow-hidden bg-gray-800 transition-transform group-hover:scale-105">
                     <img
                         src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${video.authorId}`}
                         alt="Avatar"
                         className="w-full h-full object-cover"
                     />
                 </div>
-                <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-xs text-white">
-                    <Plus size={12} strokeWidth={4} />
+                {/* Follow Button Placeholder */}
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-[#FE2C55] rounded-full w-5 h-5 flex items-center justify-center text-white shadow-md transition-opacity">
+                    <Plus size={10} strokeWidth={4} />
                 </div>
             </div>
 
             {/* Like */}
-            <div className="flex flex-col items-center cursor-pointer" onClick={handleLike}>
-                <div className={`p-2 rounded-full transition-transform active:scale-75 ${liked ? 'text-red-500' : 'text-white'}`}>
-                    <Heart size={35} fill={liked ? "currentColor" : "none"} strokeWidth={1.5} />
+            <div className="flex flex-col items-center cursor-pointer group" onClick={handleLike}>
+                <div className={`p-2 rounded-full transition-all duration-200 active:scale-75 ${liked ? 'text-[#FE2C55]' : 'text-white bg-black/20 hover:bg-black/40'}`}>
+                    <Heart size={32} fill={liked ? "currentColor" : "none"} strokeWidth={liked ? 0 : 2} className={`filter drop-shadow-lg ${liked ? 'animate-heart-pop' : ''}`} />
                 </div>
-                <span className="text-white text-xs font-semibold drop-shadow-md">{likeCount}</span>
-            </div>
-
-            {/* Comment */}
-            <div className="flex flex-col items-center cursor-pointer" onClick={onComment}>
-                <div className="p-2 rounded-full text-white transition-transform active:scale-75">
-                    <MessageCircle size={35} strokeWidth={1.5} />
-                </div>
-                <span className="text-white text-xs font-semibold drop-shadow-md">{Math.floor(Math.random() * 100)}</span>
+                <span className="text-white text-xs font-medium drop-shadow-md mt-1">{likeCount}</span>
             </div>
 
             {/* Share */}
-            <div className="flex flex-col items-center cursor-pointer" onClick={onShare}>
-                <div className="p-2 rounded-full text-white transition-transform active:scale-75">
-                    <Share2 size={35} strokeWidth={1.5} />
+            <div className="flex flex-col items-center cursor-pointer group" onClick={handleShare}>
+                <div className="p-2 rounded-full text-white bg-black/20 hover:bg-black/40 transition-all duration-200 active:scale-75">
+                    {copied ? <Check size={30} className="text-green-400" /> : <Share2 size={30} strokeWidth={2} className="filter drop-shadow-lg" />}
                 </div>
-                <span className="text-white text-xs font-semibold drop-shadow-md">分享</span>
+                <span className="text-white text-xs font-medium drop-shadow-md mt-1">{copied ? '已复制' : '分享'}</span>
+            </div>
+
+            {/* Spinning Disc (Music) Animation - Aesthetic Touch */}
+            <div className="relative mt-4 animate-spin-slow-linear">
+                <div className="w-10 h-10 bg-gray-800 rounded-full border-[6px] border-gray-900 overflow-hidden flex items-center justify-center">
+                    <img
+                        src={`https://api.dicebear.com/7.x/identicon/svg?seed=${video.authorId}`}
+                        className="w-6 h-6 rounded-full"
+                    />
+                </div>
             </div>
         </div>
     );

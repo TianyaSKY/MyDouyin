@@ -24,7 +24,7 @@ const VideoOverlay = ({ video }) => {
     }, [video.authorId, token]);
 
     return (
-        <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none pb-24 md:pb-4">
+        <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none pb-20">
             <div className="pointer-events-auto">
                 <h3 className="font-bold text-white text-lg mb-2 drop-shadow-md">@{author?.nickname || author?.username || '用户'}</h3>
                 <p className="text-white text-sm mb-3 line-clamp-2 drop-shadow-md">{video.title}</p>

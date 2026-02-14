@@ -1,6 +1,7 @@
 package com.douyin.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -35,6 +36,15 @@ public class GlobalExceptionHandler {
     public Result<Void> handleRuntimeException(RuntimeException ex) {
         log.warn("Business error: {}", ex.getMessage());
         return Result.fail(400, ex.getMessage());
+    }
+
+    /**
+     * Client closed connection while streaming resource (common for video seek/skip).
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void handleClientAbortException(ClientAbortException ex) {
+        log.warn("Client aborted connection: {}", ex.getMessage());
     }
 
     /**

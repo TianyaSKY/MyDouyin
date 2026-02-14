@@ -25,3 +25,18 @@ export const getCoverUrl = (url) => {
     // Simplest approach for "parsing":
     return `http://localhost:18081${url.startsWith('/') ? '' : '/'}${url}`;
 };
+
+/**
+ * Resolves absolute URL for video/other media resources.
+ * @param {string} url - The raw URL from API.
+ * @returns {string} - Absolute media URL.
+ */
+export const getMediaUrl = (url) => {
+    if (!url) return '';
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+
+    return `http://localhost:18081${url.startsWith('/') ? '' : '/'}${url}`;
+};

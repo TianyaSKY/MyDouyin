@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import VideoOverlay from './VideoOverlay';
 import VideoSidebar from './VideoSidebar';
 import { Play } from 'lucide-react';
+import { getMediaUrl } from '../../utils/media';
 
 const VideoPlayer = ({ video, isActive }) => {
     const videoRef = useRef(null);
@@ -41,8 +42,8 @@ const VideoPlayer = ({ video, isActive }) => {
                 ref={videoRef}
                 onClick={handleVideoPress}
                 className="w-full h-full object-cover"
-                src={video.videoUrl}
-                poster={video.coverUrl}
+                src={getMediaUrl(video.videoUrl)}
+                poster={getMediaUrl(video.coverUrl)}
                 loop
                 playsInline
                 muted // Muted for autoplay

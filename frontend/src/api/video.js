@@ -32,3 +32,25 @@ export async function getAuthorVideos(token, authorId, current = 1, size = 20) {
   }
   return json.data;
 }
+
+export async function likeVideo(token, videoId) {
+  const resp = await apiFetch(`/api/videos/${videoId}/like`, token, {
+    method: 'POST'
+  });
+  const json = await resp.json();
+  if (json.code !== 200) {
+    throw new Error(json.message || '点赞失败');
+  }
+  return json.data;
+}
+
+export async function unlikeVideo(token, videoId) {
+  const resp = await apiFetch(`/api/videos/${videoId}/like`, token, {
+    method: 'DELETE'
+  });
+  const json = await resp.json();
+  if (json.code !== 200) {
+    throw new Error(json.message || '取消点赞失败');
+  }
+  return json.data;
+}
