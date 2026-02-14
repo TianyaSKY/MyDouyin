@@ -55,6 +55,7 @@ class UserEventData(BaseModel):
     video_id: int
     event_type: str
     timestamp: str
+    timestamp_ms: Optional[int] = None
     video_embedding: List[float]
 
 

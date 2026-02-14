@@ -15,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -38,6 +40,7 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
     private static final int VECTOR_DIM = 128;
     private static final int RECENT_EVENTS_LIMIT = 50;
     private static final int VECTOR_EXPIRE_HOURS = 24;
+    private static final ZoneId EVENT_TIME_ZONE = ZoneId.of("Asia/Shanghai");
 
     private static final Map<EventType, Double> EVENT_WEIGHTS = Map.of(
         EventType.CLICK, 0.3,
@@ -148,18 +151,19 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
 
             // 4. 准备数据，调用 FastAPI 计算用户向量
             List<Map<String, Object>> eventData = new ArrayList<>();
-            DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
             for (UserEvent event : recentEvents) {
                 List<Float> videoVec = videoVectors.get(event.getVideoId());
-                if (videoVec == null || videoVec.size() != VECTOR_DIM) {
+                if (videoVec == null || videoVec.size() != VECTOR_DIM || event.getTs() == null) {
                     continue;
                 }
+                Instant eventInstant = event.getTs().atZone(EVENT_TIME_ZONE).toInstant();
 
                 Map<String, Object> eventMap = new HashMap<>();
                 eventMap.put("video_id", event.getVideoId());
                 eventMap.put("event_type", event.getEventType().name());
-                eventMap.put("timestamp", event.getTs().format(formatter));
+                eventMap.put("timestamp", DateTimeFormatter.ISO_INSTANT.format(eventInstant));
+                eventMap.put("timestamp_ms", eventInstant.toEpochMilli());
                 eventMap.put("video_embedding", videoVec);
                 
                 eventData.add(eventMap);

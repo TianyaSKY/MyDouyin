@@ -4,8 +4,8 @@
 import torch
 import numpy as np
 import logging
-from typing import List, Dict
-from datetime import datetime
+from typing import List, Dict, Optional
+from datetime import datetime, timezone
 from app.services.model_service import model_manager
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,28 @@ class UserEmbeddingService:
         "FINISH": 1.5,
         "SHARE": 2.0
     }
+
+    @staticmethod
+    def _parse_event_time(event: Dict) -> Optional[datetime]:
+        """Parse event time as UTC for stable cross-timezone decay calculation."""
+        timestamp_ms = event.get("timestamp_ms")
+        if timestamp_ms is not None:
+            try:
+                return datetime.fromtimestamp(float(timestamp_ms) / 1000.0, tz=timezone.utc)
+            except (TypeError, ValueError, OSError):
+                pass
+
+        timestamp = event.get("timestamp")
+        if not timestamp:
+            return None
+
+        try:
+            parsed = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed.astimezone(timezone.utc)
+        except ValueError:
+            return None
     
     @staticmethod
     def calculate_embedding(user_id: int, recent_events: List[Dict]) -> List[float]:
@@ -42,6 +64,7 @@ class UserEmbeddingService:
             # 1. 准备数据
             video_embeddings = []
             weights = []
+            now_utc = datetime.now(timezone.utc)
             
             for event in recent_events:
                 video_emb = event.get("video_embedding", [])
@@ -53,14 +76,10 @@ class UserEmbeddingService:
                 behavior_weight = UserEmbeddingService.EVENT_WEIGHTS.get(event_type, 0.3)
                 
                 # 时间衰减
-                timestamp = event.get("timestamp")
-                if timestamp:
-                    try:
-                        event_time = datetime.fromisoformat(timestamp)
-                        hours_diff = (datetime.now() - event_time).total_seconds() / 3600
-                        time_decay = np.exp(-0.01 * hours_diff)
-                    except:
-                        time_decay = 1.0
+                event_time_utc = UserEmbeddingService._parse_event_time(event)
+                if event_time_utc is not None:
+                    hours_diff = max(0.0, (now_utc - event_time_utc).total_seconds() / 3600.0)
+                    time_decay = float(np.exp(-0.01 * hours_diff))
                 else:
                     time_decay = 1.0
                 
