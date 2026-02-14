@@ -3,7 +3,7 @@ import { apiFetch } from './client';
 /**
  * Report user event to backend
  * @param {string} token - User auth token
- * @param {object} eventData - { userId, videoId, eventType, ctx, ts }
+ * @param {object} eventData - { userId, videoId, eventType, ctx, ts, tsMs }
  */
 export async function reportEvent(token, eventData) {
     if (!token) return;

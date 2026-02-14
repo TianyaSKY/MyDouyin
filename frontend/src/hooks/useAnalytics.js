@@ -13,6 +13,7 @@ export const useAnalytics = () => {
             videoId: videoId,
             eventType: eventType,
             ts: new Date().toISOString(),
+            tsMs: Date.now(),
             // Ensure context matches backend expectation (Map<String, Object>)
             ctx: {
                 userAgent: navigator.userAgent,

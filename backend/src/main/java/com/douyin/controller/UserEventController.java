@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import com.douyin.common.config.RabbitMQConfig;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @RestController
@@ -21,6 +24,7 @@ public class UserEventController {
 
     private final UserEventService userEventService;
     private final RabbitTemplate rabbitTemplate;
+    private static final ZoneId EVENT_ZONE = ZoneId.of("Asia/Shanghai");
 
     /**
      * GET /api/events/{id} - Get event by ID
@@ -68,6 +72,7 @@ public class UserEventController {
      */
     @PostMapping
     public Result<UserEvent> create(@Valid @RequestBody UserEvent event) {
+        normalizeEventTime(event);
         // Send to MQ for async processing (save raw log + aggregate stats)
         rabbitTemplate.convertAndSend(
                 RabbitMQConfig.EXCHANGE_NAME,
@@ -85,6 +90,7 @@ public class UserEventController {
     @PostMapping("/batch")
     public Result<Void> batchCreate(@Valid @RequestBody List<UserEvent> events) {
         for (UserEvent event : events) {
+            normalizeEventTime(event);
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.EXCHANGE_NAME,
                     RabbitMQConfig.ROUTING_KEY,
@@ -101,5 +107,19 @@ public class UserEventController {
     public Result<Void> delete(@PathVariable Long id) {
         boolean removed = userEventService.removeById(id);
         return removed ? Result.ok() : Result.fail(404, "Event not found");
+    }
+
+    private void normalizeEventTime(UserEvent event) {
+        if (event == null) {
+            return;
+        }
+        Long tsMs = event.getTsMs();
+        if (tsMs != null) {
+            event.setTs(LocalDateTime.ofInstant(Instant.ofEpochMilli(tsMs), EVENT_ZONE));
+            return;
+        }
+        if (event.getTs() == null) {
+            event.setTs(LocalDateTime.now(EVENT_ZONE));
+        }
     }
 }

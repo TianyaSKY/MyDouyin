@@ -36,4 +36,7 @@ public class UserEvent {
     private Map<String, Object> ctx;
 
     private LocalDateTime ts;
+
+    @TableField(exist = false)
+    private Long tsMs;
 }
