@@ -16,11 +16,18 @@ const VideoFeed = () => {
         if (loading || !hasMore || !user) return;
         setLoading(true);
         try {
-            // Pass the current user ID to get personalized feed
-            const data = await getFeed(token, user.userId);
+            const data = await getFeed(token, user.userId, 10);
             if (data.videos && data.videos.length > 0) {
-                setVideos(prev => [...prev, ...data.videos]);
-                setHasMore(data.hasMore);
+                const existingIds = new Set(videos.map(v => v.id));
+                const newVideos = data.videos.filter(v => !existingIds.has(v.id));
+
+                if (newVideos.length === 0) {
+                    setHasMore(false);
+                    return;
+                }
+
+                setVideos(prev => [...prev, ...newVideos]);
+                setHasMore(Boolean(data.hasMore));
             } else {
                 setHasMore(false);
             }
@@ -29,7 +36,7 @@ const VideoFeed = () => {
         } finally {
             setLoading(false);
         }
-    }, [token, user?.userId, loading, hasMore]);
+    }, [token, user?.userId, loading, hasMore, videos]);
 
 
     // Load videos when user is ready

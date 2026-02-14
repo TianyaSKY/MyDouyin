@@ -46,47 +46,129 @@ public class FeedServiceImpl implements IFeedService {
     private static final String HOT_VIDEO_KEY = "video:hot";
     private static final String USER_SEEN_KEY_PREFIX = "user:seen:";
     private static final int RECALL_MULTIPLIER = 3; // 召回候选数是返回数的3倍
+    private static final int HOT_POOL_EXPAND = 5;
+    private static final int VECTOR_POOL_EXPAND = 3;
+    private static final int MAX_RECALL_ATTEMPTS = 3;
+    private static final int MAX_RECALL_SIZE = 300;
+    private static final int MAX_EXCLUDE_SIZE = 1000;
 
     @Override
     public FeedResponse generateFeed(Long userId, int size) {
-        log.info("Generating feed for user: {}, size: {}", userId, size);
+        int requestSize = size <= 0 ? 20 : size;
+        log.info("Generating feed for user: {}, size: {}", userId, requestSize);
 
-        // 1. 多路召回
-        List<RecallCandidate> candidates = multiRecall(userId, size * RECALL_MULTIPLIER);
-        log.info("Total recalled candidates: {}", candidates.size());
+        // 0. 先获取用户已看集合，传入召回阶段直接排除
+        Set<Long> seenVideoIds = getUserSeenIds(userId);
+        log.info("User {} has seen {} videos", userId, seenVideoIds.size());
 
-        // 2. 去重过滤（过滤用户已看）
-        candidates = deduplicateByUserSeen(userId, candidates);
-        log.info("After deduplication: {}", candidates.size());
+        // 1. 分轮多路召回（逐步扩大窗口，避免每次都卡在同一批候选）
+        List<RecallCandidate> candidates = recallWithAttempts(userId, requestSize, seenVideoIds);
+        log.info("Total recalled candidates (after excluding seen): {}", candidates.size());
 
-        // 3. 排序（粗排）
+        // 2. 排序（粗排）
         candidates = rankCandidates(candidates);
 
-        // 4. 截断返回
+        // 3. 截断返回
         List<Video> result = candidates.stream()
-            .limit(size)
+            .limit(requestSize)
             .map(RecallCandidate::getVideo)
             .collect(Collectors.toList());
 
-        // 5. 异步发送曝光事件
+        // 4. 异步发送曝光事件
         asyncSendImpressionEvents(userId, result);
 
-        // 6. 更新用户已看集合
+        // 5. 更新用户已看集合
         updateUserSeenSet(userId, result);
 
-        return new FeedResponse(result, candidates.size() > size);
+        // 6. hasMore: 基于数据库总发布数 vs 已看数来判断
+        long totalPublished = videoService.count(
+            new LambdaQueryWrapper<Video>().eq(Video::getStatus, VideoStatus.PUBLISHED)
+        );
+        long seenAfterThis = seenVideoIds.size() + result.size();
+        boolean hasMore = seenAfterThis < totalPublished;
+
+        return new FeedResponse(result, hasMore);
     }
 
     /**
-     * 多路召回：热门池 + 向量召回 (并行执行)
+     * 分轮召回：逐步扩大召回窗口，避免固定 topN 被 seen 过滤后直接空结果。
      */
-    private List<RecallCandidate> multiRecall(Long userId, int totalSize) {
+    private List<RecallCandidate> recallWithAttempts(Long userId, int requestSize, Set<Long> seenVideoIds) {
+        Map<Long, RecallCandidate> uniqueMap = new LinkedHashMap<>();
+
+        for (int attempt = 0; attempt < MAX_RECALL_ATTEMPTS; attempt++) {
+            int recallSize = requestSize * RECALL_MULTIPLIER * (attempt + 1);
+            recallSize = Math.min(recallSize, MAX_RECALL_SIZE);
+
+            List<RecallCandidate> attemptCandidates = multiRecall(userId, recallSize, seenVideoIds);
+            mergeCandidates(uniqueMap, attemptCandidates);
+
+            log.info("Recall attempt {} finished, merged candidates: {}", attempt + 1, uniqueMap.size());
+            if (uniqueMap.size() >= requestSize) {
+                break;
+            }
+        }
+
+        // 兜底再补一轮 DB 候选，避免多路召回窗口不够时直接返回空
+        if (uniqueMap.size() < requestSize) {
+            int deficit = requestSize - uniqueMap.size();
+            Set<Long> excludeIds = new HashSet<>(seenVideoIds);
+            excludeIds.addAll(uniqueMap.keySet());
+
+            List<RecallCandidate> fallback = fallbackRecallFromDB(Math.min(deficit * RECALL_MULTIPLIER, MAX_RECALL_SIZE), excludeIds);
+            mergeCandidates(uniqueMap, fallback);
+            log.info("Fallback appended {}, merged candidates: {}", fallback.size(), uniqueMap.size());
+        }
+
+        return new ArrayList<>(uniqueMap.values());
+    }
+
+    private void mergeCandidates(Map<Long, RecallCandidate> uniqueMap, List<RecallCandidate> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            return;
+        }
+
+        for (RecallCandidate candidate : candidates) {
+            if (candidate == null || candidate.getVideo() == null || candidate.getVideo().getId() == null) {
+                continue;
+            }
+
+            Long videoId = candidate.getVideo().getId();
+            if (!uniqueMap.containsKey(videoId) || candidate.getScore() > uniqueMap.get(videoId).getScore()) {
+                uniqueMap.put(videoId, candidate);
+            }
+        }
+    }
+
+    /**
+     * 获取用户已看视频ID集合
+     */
+    private Set<Long> getUserSeenIds(Long userId) {
+        try {
+            String seenKey = USER_SEEN_KEY_PREFIX + userId;
+            Set<Object> seenIds = redisTemplate.opsForSet().members(seenKey);
+            if (seenIds == null || seenIds.isEmpty()) {
+                return Collections.emptySet();
+            }
+            return seenIds.stream()
+                .map(id -> Long.parseLong(id.toString()))
+                .collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("Error getting user seen set", e);
+            return Collections.emptySet();
+        }
+    }
+
+    /**
+     * 多路召回：热门池 + 向量召回 (并行执行)，在召回阶段排除已看视频
+     */
+    private List<RecallCandidate> multiRecall(Long userId, int totalSize, Set<Long> seenVideoIds) {
         List<RecallCandidate> allCandidates = new ArrayList<>();
 
         // 路径1: 热门池召回（40%）
         int hotSize = totalSize * 2 / 5;
         CompletableFuture<List<RecallCandidate>> hotFuture = CompletableFuture.supplyAsync(
-            () -> recallFromHot(hotSize), recallExecutor)
+            () -> recallFromHot(hotSize, seenVideoIds), recallExecutor)
             .exceptionally(e -> {
                 log.error("Hot recall failed", e);
                 return new ArrayList<>();
@@ -95,7 +177,7 @@ public class FeedServiceImpl implements IFeedService {
         // 路径2: 向量召回（60%，主要召回路径）
         int vectorSize = totalSize * 3 / 5;
         CompletableFuture<List<RecallCandidate>> vectorFuture = CompletableFuture.supplyAsync(
-            () -> recallByVector(userId, vectorSize), recallExecutor)
+            () -> recallByVector(userId, vectorSize, seenVideoIds), recallExecutor)
             .exceptionally(e -> {
                 log.error("Vector recall failed", e);
                 return new ArrayList<>();
@@ -136,23 +218,48 @@ public class FeedServiceImpl implements IFeedService {
             }
         }
 
-        return new ArrayList<>(uniqueMap.values());
+        // 如果热门池+向量召回都不够，用 DB 兜底补充
+        List<RecallCandidate> result = new ArrayList<>(uniqueMap.values());
+        if (result.size() < totalSize) {
+            int deficit = totalSize - result.size();
+            Set<Long> excludeIds = new HashSet<>(seenVideoIds);
+            excludeIds.addAll(uniqueMap.keySet());
+            List<RecallCandidate> fallback = fallbackRecallFromDB(deficit, excludeIds);
+            result.addAll(fallback);
+            log.info("Added {} fallback candidates from DB", fallback.size());
+        }
+
+        return result;
     }
 
     /**
-     * 路径1: 从热门池召回（Redis ZSET）
+     * 路径1: 从热门池召回（Redis ZSET），排除已看视频
      */
-    private List<RecallCandidate> recallFromHot(int size) {
+    private List<RecallCandidate> recallFromHot(int size, Set<Long> seenVideoIds) {
         try {
+            int fetchSize = Math.min(size * HOT_POOL_EXPAND, MAX_RECALL_SIZE);
             Set<ZSetOperations.TypedTuple<Object>> hotVideos =
-                redisTemplate.opsForZSet().reverseRangeWithScores(HOT_VIDEO_KEY, 0, size - 1);
+                redisTemplate.opsForZSet().reverseRangeWithScores(HOT_VIDEO_KEY, 0, fetchSize - 1);
 
             if (hotVideos == null || hotVideos.isEmpty()) {
                 log.warn("Hot video pool is empty, fallback to DB");
-                return fallbackRecallFromDB(size);
+                return fallbackRecallFromDB(size, seenVideoIds);
             }
 
-            List<Long> videoIds = hotVideos.stream()
+            // 过滤已看视频
+            List<ZSetOperations.TypedTuple<Object>> filtered = hotVideos.stream()
+                .filter(tuple -> {
+                    Long videoId = Long.parseLong(tuple.getValue().toString());
+                    return !seenVideoIds.contains(videoId);
+                })
+                .limit(size)
+                .collect(Collectors.toList());
+
+            if (filtered.isEmpty()) {
+                return fallbackRecallFromDB(size, seenVideoIds);
+            }
+
+            List<Long> videoIds = filtered.stream()
                 .map(tuple -> Long.parseLong(tuple.getValue().toString()))
                 .collect(Collectors.toList());
 
@@ -160,7 +267,7 @@ public class FeedServiceImpl implements IFeedService {
             
             return videos.stream()
                 .map(video -> {
-                    Double score = hotVideos.stream()
+                    Double score = filtered.stream()
                         .filter(t -> t.getValue().toString().equals(video.getId().toString()))
                         .findFirst()
                         .map(ZSetOperations.TypedTuple::getScore)
@@ -171,29 +278,39 @@ public class FeedServiceImpl implements IFeedService {
 
         } catch (Exception e) {
             log.error("Error recalling from hot pool", e);
-            return fallbackRecallFromDB(size);
+            return fallbackRecallFromDB(size, seenVideoIds);
         }
     }
 
     /**
-     * 路径2: 基于向量召回（Milvus）
+     * 路径2: 基于向量召回（Milvus），排除已看视频
      */
-    private List<RecallCandidate> recallByVector(Long userId, int size) {
+    private List<RecallCandidate> recallByVector(Long userId, int size, Set<Long> seenVideoIds) {
         try {
             // 获取用户融合向量（短期70% + 长期30%）
             List<Float> userVector = userEmbeddingService.getFusedVector(userId, 0.7);
             
             if (userVector.isEmpty() || userVector.stream().allMatch(v -> v == 0.0f)) {
                 log.debug("User {} has no valid vector, fallback to recent videos", userId);
-                return fallbackRecallFromDB(size);
+                return fallbackRecallFromDB(size, seenVideoIds);
             }
             
-            // 向量检索
-            List<Long> videoIds = milvusService.searchSimilarVideos(userVector, size);
+            int fetchSize = Math.min(size * VECTOR_POOL_EXPAND, MAX_RECALL_SIZE);
+            List<Long> videoIds = milvusService.searchSimilarVideos(userVector, fetchSize);
             
             if (videoIds.isEmpty()) {
                 log.debug("Vector recall returned no results, fallback to recent videos");
-                return fallbackRecallFromDB(size);
+                return fallbackRecallFromDB(size, seenVideoIds);
+            }
+
+            // 排除已看
+            videoIds = videoIds.stream()
+                .filter(id -> !seenVideoIds.contains(id))
+                .limit(size)
+                .collect(Collectors.toList());
+
+            if (videoIds.isEmpty()) {
+                return fallbackRecallFromDB(size, seenVideoIds);
             }
 
             List<Video> videos = videoService.listByIds(videoIds);
@@ -204,50 +321,33 @@ public class FeedServiceImpl implements IFeedService {
 
         } catch (Exception e) {
             log.error("Error recalling by vector", e);
-            return fallbackRecallFromDB(size);
+            return fallbackRecallFromDB(size, seenVideoIds);
         }
     }
 
     /**
-     * 兜底：从数据库召回
+     * 兜底：从数据库召回，排除已看视频
      */
-    private List<RecallCandidate> fallbackRecallFromDB(int size) {
-        List<Video> videos = videoService.list(
-            new LambdaQueryWrapper<Video>()
-                .eq(Video::getStatus, VideoStatus.PUBLISHED)
-                .orderByDesc(Video::getCreatedAt)
-                .last("LIMIT " + size)
-        );
+    private List<RecallCandidate> fallbackRecallFromDB(int size, Set<Long> excludeIds) {
+        int querySize = Math.min(size, MAX_RECALL_SIZE);
+        LambdaQueryWrapper<Video> wrapper = new LambdaQueryWrapper<Video>()
+            .eq(Video::getStatus, VideoStatus.PUBLISHED);
+
+        if (excludeIds != null && !excludeIds.isEmpty()) {
+            List<Long> limitedExcludeIds = excludeIds.stream()
+                .limit(MAX_EXCLUDE_SIZE)
+                .collect(Collectors.toList());
+            wrapper.notIn(Video::getId, limitedExcludeIds);
+        }
+
+        wrapper.orderByDesc(Video::getCreatedAt)
+            .last("LIMIT " + querySize);
+
+        List<Video> videos = videoService.list(wrapper);
 
         return videos.stream()
             .map(video -> new RecallCandidate(video, 10.0, "fallback"))
             .collect(Collectors.toList());
-    }
-
-    /**
-     * 去重：过滤用户已看视频
-     */
-    private List<RecallCandidate> deduplicateByUserSeen(Long userId, List<RecallCandidate> candidates) {
-        try {
-            String seenKey = USER_SEEN_KEY_PREFIX + userId;
-            Set<Object> seenIds = redisTemplate.opsForSet().members(seenKey);
-            
-            if (seenIds == null || seenIds.isEmpty()) {
-                return candidates;
-            }
-
-            Set<Long> seenVideoIds = seenIds.stream()
-                .map(id -> Long.parseLong(id.toString()))
-                .collect(Collectors.toSet());
-
-            return candidates.stream()
-                .filter(candidate -> !seenVideoIds.contains(candidate.getVideo().getId()))
-                .collect(Collectors.toList());
-
-        } catch (Exception e) {
-            log.error("Error deduplicating by user seen", e);
-            return candidates;
-        }
     }
 
     /**
@@ -329,4 +429,3 @@ public class FeedServiceImpl implements IFeedService {
         }
     }
 }
-
