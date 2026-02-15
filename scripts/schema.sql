@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS user_event (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
     video_id BIGINT NOT NULL COMMENT '视频ID',
-    event_type ENUM('impr', 'click', 'like', 'finish', 'share') NOT NULL COMMENT '事件类型(曝光, 点击, 点赞, 完播, 分享)',
+    event_type ENUM('impr', 'click', 'like', 'finish', 'share', 'leave') NOT NULL COMMENT '事件类型(曝光, 点击, 点赞, 完播, 分享, 离开)',
     watch_ms INT DEFAULT 0 COMMENT '观看时长(毫秒)',
     ctx JSON NULL COMMENT '上下文信息(设备, 入口, 时间戳等)',
     ts DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '事件发生时间',
