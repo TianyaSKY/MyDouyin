@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ClientAbortException.class)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void handleClientAbortException(ClientAbortException ex) {
-        log.warn("Client aborted connection: {}", ex.getMessage());
+        log.debug("Client aborted connection: {}", ex.getMessage());
     }
 
     /**
