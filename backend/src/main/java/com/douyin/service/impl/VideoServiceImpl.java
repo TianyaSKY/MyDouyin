@@ -54,7 +54,8 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video>
         IPage<Video> page = page(new Page<>(current, size),
                 new LambdaQueryWrapper<Video>()
                         .eq(Video::getAuthorId, authorId)
-                        .orderByDesc(Video::getCreatedAt));
+                        .orderByDesc(Video::getCreatedAt)
+                        .orderByDesc(Video::getId));
         populateStats(page);
         return page;
     }

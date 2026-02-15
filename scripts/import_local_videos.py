@@ -54,13 +54,33 @@ except ImportError:
     sys.exit(1)
 
 
+def load_root_env() -> None:
+    """加载项目根目录 .env 到进程环境变量（仅填充未设置项）。"""
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+load_root_env()
+
+
 # ──────────── 默认配置 ────────────
 DEFAULT_DB_CONFIG = {
-    "host": "localhost",
-    "port": 3306,
-    "user": "douyin_user",
-    "password": "douyin_password",
-    "database": "douyin",
+    "host": os.getenv("MYSQL_HOST", "localhost"),
+    "port": int(os.getenv("MYSQL_PORT", "3306")),
+    "user": os.getenv("MYSQL_USER", "douyin_user"),
+    "password": os.getenv("MYSQL_PASSWORD", "douyin_password"),
+    "database": os.getenv("MYSQL_DATABASE", "douyin"),
     "charset": "utf8mb4",
 }
 
@@ -204,8 +224,8 @@ def main():
     parser.add_argument("--db-user", default=DEFAULT_DB_CONFIG["user"], help="MySQL 用户名")
     parser.add_argument("--db-password", default=DEFAULT_DB_CONFIG["password"], help="MySQL 密码")
     parser.add_argument("--db-name", default=DEFAULT_DB_CONFIG["database"], help="数据库名")
-    parser.add_argument("--milvus-host", default="localhost", help="Milvus 主机")
-    parser.add_argument("--milvus-port", default="19530", help="Milvus 端口")
+    parser.add_argument("--milvus-host", default=os.getenv("MILVUS_HOST", "localhost"), help="Milvus 主机")
+    parser.add_argument("--milvus-port", default=os.getenv("MILVUS_PORT", "19530"), help="Milvus 端口")
     parser.add_argument("--dry-run", action="store_true", help="仅预览，不实际执行")
     args = parser.parse_args()
 

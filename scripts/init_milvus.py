@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 from pymilvus import (
     connections,
     FieldSchema,
@@ -7,9 +10,29 @@ from pymilvus import (
     utility,
 )
 
+
+def load_root_env() -> None:
+    """加载项目根目录 .env 到进程环境变量（仅填充未设置项）。"""
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    if not env_path.exists():
+        return
+
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+load_root_env()
+
 # Configuration
-MILVUS_HOST = "localhost"
-MILVUS_PORT = "19530"
+MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
+MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
 DIM = 128  # 向量维度
 
 

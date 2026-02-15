@@ -4,9 +4,10 @@ Milvus 向量数据库服务
 """
 
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 from pymilvus import connections, Collection, utility
 import time
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +15,14 @@ logger = logging.getLogger(__name__)
 class MilvusService:
     """Milvus 向量数据库服务"""
 
-    def __init__(self, host: str = "localhost", port: str = "19530"):
-        self.host = host
-        self.port = port
+    def __init__(
+        self,
+        host: Optional[str] = None,
+        port: Optional[Union[int, str]] = None,
+    ):
+        self.host = host or settings.MILVUS_HOST
+        selected_port = settings.MILVUS_PORT if port is None else port
+        self.port = str(selected_port)
         self.connected = False
         self._connect()
 
