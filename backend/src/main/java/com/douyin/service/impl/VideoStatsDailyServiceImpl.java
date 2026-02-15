@@ -6,6 +6,9 @@ import com.douyin.entity.VideoStatsDaily;
 import com.douyin.entity.enums.EventType;
 import com.douyin.mapper.VideoStatsDailyMapper;
 import com.douyin.service.VideoStatsDailyService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -21,6 +24,10 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "videoTotalStats", key = "#stats.videoId", condition = "#stats != null && #stats.videoId != null"),
+            @CacheEvict(cacheNames = "authorTotalLikes", allEntries = true, condition = "#stats != null")
+    })
     public boolean saveOrUpdateStats(VideoStatsDaily stats) {
         // Check if a record already exists for the same video_id + date
         VideoStatsDaily existing = getOne(new LambdaQueryWrapper<VideoStatsDaily>()
@@ -36,6 +43,11 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "videoTotalStats", key = "#videoId", condition = "#videoId != null"),
+            @CacheEvict(cacheNames = "authorTotalLikes", allEntries = true,
+                    condition = "#eventType != null && #eventType.name() == 'LIKE'")
+    })
     public void incrementStats(Long videoId, EventType eventType, int watchMs) {
         if (videoId == null || eventType == null) {
             return;
@@ -52,11 +64,13 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
     }
 
     @Override
+    @Cacheable(cacheNames = "authorTotalLikes", key = "#authorId", condition = "#authorId != null")
     public Long getTotalLikesByAuthor(Long authorId) {
         return baseMapper.sumLikesByAuthorId(authorId);
     }
 
     @Override
+    @Cacheable(cacheNames = "videoTotalStats", key = "#videoId", condition = "#videoId != null")
     public VideoStatsDaily getTotalStatsByVideo(Long videoId) {
         return baseMapper.sumStatsByVideoId(videoId);
     }

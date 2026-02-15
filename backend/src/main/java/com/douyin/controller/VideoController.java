@@ -9,6 +9,7 @@ import com.douyin.entity.dto.UploadCompleteResponse;
 import com.douyin.entity.dto.UploadInitRequest;
 import com.douyin.entity.dto.UploadInitResponse;
 import com.douyin.entity.dto.CreateVideoRequest;
+import com.douyin.entity.dto.VideoLikeStatusResponse;
 import com.douyin.entity.Video;
 import com.douyin.entity.dto.VideoEmbeddingTaskMessage;
 import com.douyin.entity.enums.VideoStatus;
@@ -214,6 +215,23 @@ public class VideoController {
         Map<String, Object> data = new HashMap<>();
         data.put("liked", false);
         return Result.ok(data);
+    }
+
+    /**
+     * GET /api/videos/{id}/like - 查询点赞总数与当前用户点赞状态
+     */
+    @GetMapping("/{id}/like")
+    public Result<VideoLikeStatusResponse> getLikeStatus(@PathVariable Long id) {
+        Video video = videoService.getById(id);
+        if (video == null) {
+            return Result.fail(404, "Video not found");
+        }
+
+        Long userId = getCurrentUserId();
+        boolean liked = userId != null && userVideoActionService.isVideoLikedByUser(userId, id);
+        long likeCount = userVideoActionService.countActiveLikes(id);
+
+        return Result.ok(new VideoLikeStatusResponse(id, likeCount, liked));
     }
 
     /**

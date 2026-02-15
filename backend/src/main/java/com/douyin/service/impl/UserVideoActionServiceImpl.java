@@ -7,6 +7,8 @@ import com.douyin.entity.enums.UserVideoActionType;
 import com.douyin.mapper.UserVideoActionMapper;
 import com.douyin.service.UserVideoActionService;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ public class UserVideoActionServiceImpl extends ServiceImpl<UserVideoActionMappe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = "videoLikeCount", key = "#videoId", condition = "#result && #videoId != null")
     public boolean likeVideo(Long userId, Long videoId) {
         UserVideoAction action = getOne(new LambdaQueryWrapper<UserVideoAction>()
                 .eq(UserVideoAction::getUserId, userId)
@@ -51,6 +54,7 @@ public class UserVideoActionServiceImpl extends ServiceImpl<UserVideoActionMappe
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(cacheNames = "videoLikeCount", key = "#videoId", condition = "#result && #videoId != null")
     public boolean unlikeVideo(Long userId, Long videoId) {
         UserVideoAction action = getOne(new LambdaQueryWrapper<UserVideoAction>()
                 .eq(UserVideoAction::getUserId, userId)
@@ -65,5 +69,29 @@ public class UserVideoActionServiceImpl extends ServiceImpl<UserVideoActionMappe
         action.setStatus(STATUS_INACTIVE);
         updateById(action);
         return true;
+    }
+
+    @Override
+    @Cacheable(cacheNames = "videoLikeCount", key = "#videoId", condition = "#videoId != null")
+    public long countActiveLikes(Long videoId) {
+        if (videoId == null) {
+            return 0L;
+        }
+        return count(new LambdaQueryWrapper<UserVideoAction>()
+                .eq(UserVideoAction::getVideoId, videoId)
+                .eq(UserVideoAction::getActionType, UserVideoActionType.LIKE)
+                .eq(UserVideoAction::getStatus, STATUS_ACTIVE));
+    }
+
+    @Override
+    public boolean isVideoLikedByUser(Long userId, Long videoId) {
+        if (userId == null || videoId == null) {
+            return false;
+        }
+        return count(new LambdaQueryWrapper<UserVideoAction>()
+                .eq(UserVideoAction::getUserId, userId)
+                .eq(UserVideoAction::getVideoId, videoId)
+                .eq(UserVideoAction::getActionType, UserVideoActionType.LIKE)
+                .eq(UserVideoAction::getStatus, STATUS_ACTIVE)) > 0;
     }
 }

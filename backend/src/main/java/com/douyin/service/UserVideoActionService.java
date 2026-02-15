@@ -14,4 +14,14 @@ public interface UserVideoActionService extends IService<UserVideoAction> {
      * Deactivate like status. Returns true only when state changes to unliked.
      */
     boolean unlikeVideo(Long userId, Long videoId);
+
+    /**
+     * Count active likes for a video.
+     */
+    long countActiveLikes(Long videoId);
+
+    /**
+     * Whether a user has liked a video.
+     */
+    boolean isVideoLikedByUser(Long userId, Long videoId);
 }

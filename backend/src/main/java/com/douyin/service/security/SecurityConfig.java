@@ -57,7 +57,7 @@ public class SecurityConfig {
 
                 // Public endpoints
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/{id}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/{id}", "/api/videos/{id}/like", "/api/videos/*/like").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/feed").permitAll()
                 .requestMatchers(HttpMethod.GET, "/uploads/videos/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/uploads/covers/**").permitAll()

@@ -8,7 +8,11 @@ import com.douyin.entity.Video;
 import com.douyin.entity.enums.VideoStatus;
 import com.douyin.mapper.VideoMapper;
 import com.douyin.service.VideoService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+
+import java.io.Serializable;
 
 @Service
 @lombok.RequiredArgsConstructor
@@ -16,6 +20,24 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video>
         implements VideoService {
 
     private final com.douyin.service.VideoStatsDailyService videoStatsDailyService;
+
+    @Override
+    @Cacheable(cacheNames = "videoDetail", key = "#id", condition = "#id != null")
+    public Video getById(Serializable id) {
+        return super.getById(id);
+    }
+
+    @Override
+    @CacheEvict(cacheNames = "videoDetail", key = "#entity.id", condition = "#entity != null && #entity.id != null")
+    public boolean updateById(Video entity) {
+        return super.updateById(entity);
+    }
+
+    @Override
+    @CacheEvict(cacheNames = "videoDetail", key = "#id", condition = "#id != null")
+    public boolean removeById(Serializable id) {
+        return super.removeById(id);
+    }
 
     @Override
     public IPage<Video> pageByStatus(VideoStatus status, int current, int size) {
