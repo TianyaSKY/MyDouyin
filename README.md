@@ -1,8 +1,9 @@
 # Douyin (TikTok Clone)
+![title.png](docs/images/title.png)
 
 基于微服务架构的高性能短视频平台 MVP，具备个性化推荐系统、高效的视频上传机制以及现代化的用户界面。
 
-## 🚀 功能特性
+## 功能特性
 
 - **个性化推荐 Feed 流**：基于用户行为（点赞、完播、分享）的多阶段推荐引擎（召回 -> 排序）。
 - **智能上传**：
@@ -12,7 +13,7 @@
 - **交互式 UI**：沉浸式全屏视频播放体验，支持点赞、分享、评论等交互。
 - **用户体系**：完整的用户个人主页、观看历史记录及兴趣建模。
 
-## 🛠 技术栈
+## 技术栈
 
 ### 前端
 - **框架**：React 18 + Vite
@@ -34,11 +35,11 @@
   - 双塔架构 (Two-Tower Architecture) 用于生成用户/视频向量。
   - 多路召回策略 (热门召回、标签召回、向量召回)。
 
-## 🏗 系统架构
+## 系统架构
 
 ![archieve.png](docs/images/archieve.png)
 
-## 📸 项目截图
+## 项目截图
 
 ### 首页 Feed 流
 ![首页 Feed 流](docs/images/screenshot_feed.png)
@@ -52,7 +53,7 @@
 ![用户主页](docs/images/screenshot_profile.png)
 *用户个人主页，展示上传作品及获赞数据。*
 
-## 🏁 快速开始
+## 快速开始
 
 ### 前置要求
 - Node.js & npm/pnpm
@@ -92,7 +93,7 @@ npm install
 npm run dev
 ```
 
-## 📂 项目结构
+## 项目结构
 
 - `frontend/`: 基于 React 的 Web 前端应用。
 - **backend/**: 核心业务逻辑与 API 网关 (Spring Boot)。
@@ -100,7 +101,7 @@ npm run dev
 - `docker-compose.yml`: 基础设施编排文件。
 - `scripts/`: 实用脚本工具。
 
-## 📄 文档资源
+## 文档资源
 
 更详细的开发文档请参考：
 - [开发指南](开发.md)
