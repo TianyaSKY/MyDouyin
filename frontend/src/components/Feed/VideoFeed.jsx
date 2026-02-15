@@ -94,9 +94,13 @@ const VideoFeed = () => {
                     className="h-full w-full snap-start relative"
                     ref={index === videos.length - 1 ? lastVideoRef : null}
                 >
+
                     <VideoPlayer
                         video={video}
                         isActive={index === currentVideoIndex}
+                        onDelete={(deletedVideoId) => {
+                            setVideos(prev => prev.filter(v => v.id !== deletedVideoId));
+                        }}
                     />
                 </div>
             ))}

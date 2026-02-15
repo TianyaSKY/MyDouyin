@@ -44,6 +44,7 @@ export async function likeVideo(token, videoId) {
   return json.data;
 }
 
+
 export async function unlikeVideo(token, videoId) {
   const resp = await apiFetch(`/api/videos/${videoId}/like`, token, {
     method: 'DELETE'
@@ -51,6 +52,26 @@ export async function unlikeVideo(token, videoId) {
   const json = await resp.json();
   if (json.code !== 200) {
     throw new Error(json.message || '取消点赞失败');
+  }
+  return json.data;
+}
+
+export async function getVideoLikeStatus(token, videoId) {
+  const resp = await apiFetch(`/api/videos/${videoId}/like`, token);
+  const json = await resp.json();
+  if (json.code !== 200) {
+    throw new Error(json.message || '获取点赞状态失败');
+  }
+  return json.data;
+}
+
+export async function deleteVideo(token, videoId) {
+  const resp = await apiFetch(`/api/videos/${videoId}`, token, {
+    method: 'DELETE'
+  });
+  const json = await resp.json();
+  if (json.code !== 200) {
+    throw new Error(json.message || '删除视频失败');
   }
   return json.data;
 }

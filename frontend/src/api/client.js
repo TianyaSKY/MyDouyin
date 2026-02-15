@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:18081';
+const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "18081";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || `http://localhost:${BACKEND_PORT}`;
 
 export async function apiFetch(path, token, init = {}) {
   const headers = { ...(init.headers || {}) };

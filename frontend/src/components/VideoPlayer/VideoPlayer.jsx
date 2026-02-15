@@ -6,7 +6,7 @@ import { Play } from 'lucide-react';
 import { getMediaUrl } from '../../utils/media';
 import { useAnalytics } from '../../hooks/useAnalytics';
 
-const VideoPlayer = ({ video, isActive }) => {
+const VideoPlayer = ({ video, isActive, onDelete }) => {
     const videoRef = useRef(null);
     const [playing, setPlaying] = useState(false);
     const [fitMode, setFitMode] = useState('contain'); // 'contain' or 'cover'
@@ -95,10 +95,13 @@ const VideoPlayer = ({ video, isActive }) => {
             )}
 
             <VideoOverlay video={video} />
+
             <VideoSidebar
                 video={video}
                 onToggleFit={toggleFitMode}
                 fitMode={fitMode}
+                isActive={isActive}
+                onDelete={onDelete}
             />
         </div>
     );

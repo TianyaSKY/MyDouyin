@@ -1,4 +1,8 @@
 
+const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "18081";
+const MEDIA_BASE_URL =
+    import.meta.env.VITE_MEDIA_BASE_URL || `http://localhost:${BACKEND_PORT}`;
+
 /**
  * Resolves the absolute URL for a media resource (image/video).
  * @param {string} url - The raw URL from the API.
@@ -12,18 +16,7 @@ export const getCoverUrl = (url) => {
         return url;
     }
 
-    // If relative, prepend the backend base URL
-    // Note: In Vite proxy, /api is proxies, but /uploads might not be if it's served statically by backend
-    // on the same port.
-    // However, usually we can just use the relative path if it's same origin,
-    // BUT user specifically asked to fix parsing, and provided localhost:18081 examples.
-    // Let's assume we want to point to the backend directly if it's independent,
-    // OR just return the relative path if the dev server proxies it.
-    // Given the previous context, let's prepend the localhost:18081 for safety if it's missing,
-    // OR if we rely on proxy, just ensure it starts with /.
-
-    // Simplest approach for "parsing":
-    return `http://localhost:18081${url.startsWith('/') ? '' : '/'}${url}`;
+    return `${MEDIA_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 /**
@@ -38,5 +31,5 @@ export const getMediaUrl = (url) => {
         return url;
     }
 
-    return `http://localhost:18081${url.startsWith('/') ? '' : '/'}${url}`;
+    return `${MEDIA_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 };

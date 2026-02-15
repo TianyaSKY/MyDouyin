@@ -43,9 +43,11 @@ const ProfilePage = () => {
     const [hasMore, setHasMore] = useState(true);
     const [activeTab, setActiveTab] = useState('works'); // works, likes, private
     const observer = useRef();
+    const loadingRef = useRef(false);
 
     const fetchVideos = async (pageNum) => {
-        if (!user?.userId) return;
+        if (!user?.userId || loadingRef.current) return;
+        loadingRef.current = true;
         try {
             setLoading(true);
             const data = await getAuthorVideos(token, user.userId, pageNum, 18);
@@ -59,6 +61,7 @@ const ProfilePage = () => {
             console.error("Failed to fetch videos", err);
         } finally {
             setLoading(false);
+            loadingRef.current = false;
         }
     };
 

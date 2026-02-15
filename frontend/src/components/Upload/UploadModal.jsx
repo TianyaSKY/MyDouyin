@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import SparkMD5 from 'spark-md5';
-import { Upload, X, Check, Loader2, FileVideo, Image as ImageIcon, AtSign, Hash, Globe, Lock } from 'lucide-react';
+import { Upload, X, Check, Loader2, FileVideo, Image as ImageIcon, AtSign, Hash } from 'lucide-react';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { initUpload, uploadChunk, completeUpload, uploadCover, CHUNK_SIZE } from '../../api/upload';
 import { createVideo } from '../../api/video';
@@ -16,10 +16,11 @@ const UploadModal = ({ isOpen, onClose }) => {
     const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+
     const [tags, setTags] = useState(''); // New state for tags
     const [coverFile, setCoverFile] = useState(null);
     const [coverPreview, setCoverPreview] = useState(null);
-    const [visibility, setVisibility] = useState('public'); // public, private
+
 
     // Upload State
     const [status, setStatus] = useState('idle'); // idle, hashing, uploading, processing, success, error
@@ -239,230 +240,193 @@ const UploadModal = ({ isOpen, onClose }) => {
 
                 {/* Content */}
                 <div className="flex-1 overflow-hidden relative">
-                    {!file ? (
-                        // Initial Dropzone State
-                        <div
-                            className={`h-full min-h-[400px] flex flex-col items-center justify-center p-8 transition-colors ${isDragging ? 'bg-gray-800/50 border-blue-500' : 'hover:bg-gray-800/30'
-                                }`}
-                            onDrop={handleDrop}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onClick={() => fileInputRef.current?.click()}
-                        >
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileSelect}
-                                className="hidden"
-                                accept="video/*"
-                            />
+                    <div className="flex flex-col md:flex-row h-full">
 
-                            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                                <Upload size={40} className="text-blue-500" />
-                            </div>
+                        {/* Left: Preview & Cover (Acts as uploader if no file) */}
+                        <div className="w-full md:w-[320px] bg-black/40 border-r border-gray-800 p-6 flex flex-col items-center overflow-y-auto custom-scrollbar">
+                            {!file ? (
+                                <div
+                                    className="w-full h-full flex flex-col items-center justify-center bg-[#252836] hover:bg-[#2d3042] rounded-xl transition-all duration-300 cursor-pointer group relative overflow-hidden"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    onDrop={handleDrop}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-                            <h3 className="text-xl font-bold text-white mb-2">上传视频</h3>
-                            <p className="text-gray-400 text-sm mb-8">拖拽文件到这里，或点击上传</p>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleFileSelect}
+                                        className="hidden"
+                                        accept="video/*"
+                                    />
 
-                            <button className="px-8 py-2.5 bg-[#FE2C55] text-white font-medium rounded-sm hover:bg-[#E6284D] transition-colors">
-                                选择文件
-                            </button>
+                                    <div className="w-16 h-16 bg-[#3b3e52] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg relative z-10">
+                                        <Upload size={28} className="text-gray-400 group-hover:text-white transition-colors" />
+                                    </div>
 
-                            <div className="mt-8 flex space-x-8 text-xs text-gray-500">
-                                <span>支持 MP4, WebM</span>
-                                <span>•</span>
-                                <span>最大 500MB</span>
-                                <span>•</span>
-                                <span>720x1280 以上效果更佳</span>
-                            </div>
-
-                            {errorMsg && <p className="text-red-500 mt-4 animate-pulse">{errorMsg}</p>}
-                        </div>
-                    ) : (
-                        // Editing State (2 Columns)
-                        <div className="flex flex-col md:flex-row h-full">
-
-                            {/* Left: Preview & Cover */}
-                            <div className="w-full md:w-[320px] bg-black/40 border-r border-gray-800 p-6 flex flex-col items-center overflow-y-auto custom-scrollbar">
-                                <div className="text-xs text-gray-400 font-medium mb-3 self-start w-full flex justify-between">
-                                    <span>预览 & 封面</span>
-                                    <button onClick={reset} className="text-blue-400 hover:underline">重新上传</button>
+                                    <h3 className="text-sm font-bold text-gray-300 group-hover:text-white mb-1 transition-colors relative z-10">点击或拖拽上传视频</h3>
+                                    <p className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors relative z-10">支持 MP4, WebM</p>
                                 </div>
+                            ) : (
+                                <>
+                                    <div className="text-xs text-gray-400 font-medium mb-3 self-start w-full flex justify-between">
+                                        <span>预览 & 封面</span>
+                                        <button onClick={reset} className="text-blue-400 hover:underline">重新上传</button>
+                                    </div>
 
-                                <div className="aspect-[9/16] w-full bg-black rounded-lg overflow-hidden shadow-lg border border-gray-800 relative group">
-                                    {videoPreviewUrl && (
-                                        <video
-                                            src={videoPreviewUrl}
-                                            className="w-full h-full object-contain"
-                                            controls
-                                            muted
-                                        />
-                                    )}
-                                </div>
-
-                                <div className="mt-6 w-full">
-                                    <label className="text-xs text-gray-400 mb-2 block">
-                                        设置封面 <span className="text-red-500">*</span>
-                                    </label>
-                                    <div
-                                        onClick={() => coverInputRef.current?.click()}
-                                        className="w-full aspect-video bg-gray-800 rounded-lg border border-dashed border-gray-700 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-700 transition-colors relative overflow-hidden group"
-                                    >
-                                        {coverPreview ? (
-                                            <>
-                                                <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                    <span className="text-white text-xs">更换封面</span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ImageIcon size={20} className="text-gray-500 mb-1" />
-                                                <span className="text-xs text-gray-500">点击上传封面</span>
-                                            </>
+                                    <div className="aspect-[9/16] w-full bg-black rounded-lg overflow-hidden shadow-lg border border-gray-800 relative group">
+                                        {videoPreviewUrl && (
+                                            <video
+                                                src={videoPreviewUrl}
+                                                className="w-full h-full object-contain"
+                                                controls
+                                                muted
+                                            />
                                         )}
+                                    </div>
+
+                                    <div className="mt-6 w-full">
+                                        <label className="text-xs text-gray-400 mb-2 block">
+                                            设置封面 <span className="text-red-500">*</span>
+                                        </label>
+                                        <div
+                                            onClick={() => coverInputRef.current?.click()}
+                                            className="w-full aspect-video bg-gray-800 rounded-lg border border-dashed border-gray-700 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-700 transition-colors relative overflow-hidden group"
+                                        >
+                                            {coverPreview ? (
+                                                <>
+                                                    <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                        <span className="text-white text-xs">更换封面</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ImageIcon size={20} className="text-gray-500 mb-1" />
+                                                    <span className="text-xs text-gray-500">点击上传封面</span>
+                                                </>
+                                            )}
+                                            <input
+                                                type="file"
+                                                ref={coverInputRef}
+                                                onChange={handleCoverSelect}
+                                                accept="image/*"
+                                                className="hidden"
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Right: Form Info */}
+                        <div className="flex-1 p-8 overflow-y-auto custom-scrollbar relative">
+                            <div className={`max-w-2xl mx-auto space-y-6 ${!file ? 'opacity-50 pointer-events-none filter blur-[1px]' : ''}`}>
+
+                                {/* Title */}
+                                <div>
+                                    <label className="block text-sm font-medium text-white mb-2">作品标题 <span className="text-red-500">*</span></label>
+                                    <div className="relative">
                                         <input
-                                            type="file"
-                                            ref={coverInputRef}
-                                            onChange={handleCoverSelect}
-                                            accept="image/*"
-                                            className="hidden"
+                                            type="text"
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            className="w-full bg-[#252836] border border-gray-700 rounded-md p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-gray-500"
+                                            placeholder="给作品起个好标题..."
+                                            maxLength={50}
+                                        />
+                                        <span className="absolute right-3 top-3.5 text-xs text-gray-500">{title.length}/50</span>
+                                    </div>
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <label className="block text-sm font-medium text-white mb-2">作品描述</label>
+                                    <div className="relative bg-[#252836] border border-gray-700 rounded-md p-3">
+                                        <textarea
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            className="w-full bg-transparent border-none text-white focus:ring-0 outline-none min-h-[120px] resize-none placeholder-gray-500 text-sm"
+                                            placeholder="添加合适的话题和描述，让更多人看到..."
+                                            maxLength={500}
+                                        />
+                                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-700/50">
+                                            <div className="flex space-x-2 text-gray-400">
+                                                <button className="hover:text-white flex items-center text-xs"><Hash size={14} className="mr-1" /> 话题</button>
+                                                <button className="hover:text-white flex items-center text-xs"><AtSign size={14} className="mr-1" /> 好友</button>
+                                            </div>
+                                            <span className="text-xs text-gray-500">{description.length}/500</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Tags */}
+                                <div>
+                                    <label className="block text-sm font-medium text-white mb-2">标签</label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Hash size={16} className="text-gray-500" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={tags}
+                                            onChange={(e) => setTags(e.target.value)}
+                                            className="w-full bg-[#252836] border border-gray-700 rounded-md py-3 pl-10 pr-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-gray-500"
+                                            placeholder="输入标签，用空格或逗号分隔..."
                                         />
                                     </div>
                                 </div>
+
                             </div>
 
-                            {/* Right: Form Info */}
-                            <div className="flex-1 p-8 overflow-y-auto custom-scrollbar relative">
-                                <div className="max-w-2xl mx-auto space-y-6">
-
-                                    {/* Title */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-white mb-2">作品标题 <span className="text-red-500">*</span></label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={title}
-                                                onChange={(e) => setTitle(e.target.value)}
-                                                className="w-full bg-[#252836] border border-gray-700 rounded-md p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-gray-500"
-                                                placeholder="给作品起个好标题..."
-                                                maxLength={50}
-                                            />
-                                            <span className="absolute right-3 top-3.5 text-xs text-gray-500">{title.length}/50</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Description */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-white mb-2">作品描述</label>
-                                        <div className="relative bg-[#252836] border border-gray-700 rounded-md p-3">
-                                            <textarea
-                                                value={description}
-                                                onChange={(e) => setDescription(e.target.value)}
-                                                className="w-full bg-transparent border-none text-white focus:ring-0 outline-none min-h-[120px] resize-none placeholder-gray-500 text-sm"
-                                                placeholder="添加合适的话题和描述，让更多人看到..."
-                                                maxLength={500}
-                                            />
-                                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-700/50">
-                                                <div className="flex space-x-2 text-gray-400">
-                                                    <button className="hover:text-white flex items-center text-xs"><Hash size={14} className="mr-1" /> 话题</button>
-                                                    <button className="hover:text-white flex items-center text-xs"><AtSign size={14} className="mr-1" /> 好友</button>
-                                                </div>
-                                                <span className="text-xs text-gray-500">{description.length}/500</span>
+                            {/* Footer Action Area */}
+                            <div className="absolute bottom-0 left-0 right-0 p-6 bg-[#161823] border-t border-gray-800 flex items-center justify-between z-10">
+                                <div className="flex-1 mr-8">
+                                    {status !== 'idle' && (
+                                        <div className="w-full">
+                                            <div className="flex justify-between text-xs text-gray-400 mb-1">
+                                                <span>{status === 'success' ? '完成' : status === 'error' ? '失败' : '上传中...'}</span>
+                                                <span>{progress}%</span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-300 ${status === 'error' ? 'bg-red-500' : 'bg-[#FE2C55]'}`}
+                                                    style={{ width: `${progress}%` }}
+                                                />
                                             </div>
                                         </div>
-                                    </div>
-
-                                    {/* Tags */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-white mb-2">标签</label>
-                                        <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                <Hash size={16} className="text-gray-500" />
-                                            </div>
-                                            <input
-                                                type="text"
-                                                value={tags}
-                                                onChange={(e) => setTags(e.target.value)}
-                                                className="w-full bg-[#252836] border border-gray-700 rounded-md py-3 pl-10 pr-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-gray-500"
-                                                placeholder="输入标签，用空格或逗号分隔..."
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Visibility / Settings */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-white mb-2">发布设置</label>
-                                        <div className="flex space-x-4">
-                                            <button
-                                                onClick={() => setVisibility('public')}
-                                                className={`flex items-center px-4 py-2 rounded-md text-sm border transition-colors ${visibility === 'public'
-                                                    ? 'bg-gray-800 border-blue-500 text-blue-400'
-                                                    : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-600'
-                                                    }`}
-                                            >
-                                                <Globe size={16} className="mr-2" /> 公开 · 所有人可见
-                                            </button>
-                                            <button
-                                                onClick={() => setVisibility('private')}
-                                                className={`flex items-center px-4 py-2 rounded-md text-sm border transition-colors ${visibility === 'private'
-                                                    ? 'bg-gray-800 border-blue-500 text-blue-400'
-                                                    : 'bg-transparent border-gray-700 text-gray-400 hover:border-gray-600'
-                                                    }`}
-                                            >
-                                                <Lock size={16} className="mr-2" /> 私密 · 仅自己可见
-                                            </button>
-                                        </div>
-                                    </div>
-
+                                    )}
+                                    {errorMsg && <p className="text-red-500 text-sm mt-1">{errorMsg}</p>}
                                 </div>
 
-                                {/* Footer Action Area */}
-                                <div className="absolute bottom-0 left-0 right-0 p-6 bg-[#161823] border-t border-gray-800 flex items-center justify-between z-10">
-                                    <div className="flex-1 mr-8">
-                                        {status !== 'idle' && (
-                                            <div className="w-full">
-                                                <div className="flex justify-between text-xs text-gray-400 mb-1">
-                                                    <span>{status === 'success' ? '完成' : status === 'error' ? '失败' : '上传中...'}</span>
-                                                    <span>{progress}%</span>
-                                                </div>
-                                                <div className="h-1.5 w-full bg-gray-700 rounded-full overflow-hidden">
-                                                    <div
-                                                        className={`h-full transition-all duration-300 ${status === 'error' ? 'bg-red-500' : 'bg-[#FE2C55]'}`}
-                                                        style={{ width: `${progress}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                        {errorMsg && <p className="text-red-500 text-sm mt-1">{errorMsg}</p>}
-                                    </div>
-
-                                    <div className="flex space-x-3">
-                                        <button
-                                            onClick={onClose}
-                                            className="px-6 py-2.5 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-800 transition-colors"
-                                        >
-                                            取消
-                                        </button>
-                                        <button
-                                            onClick={handleUpload}
-                                            disabled={status !== 'idle' && status !== 'error'}
-                                            className={`px-8 py-2.5 rounded-md text-sm font-medium text-white transition-all shadow-lg
-                                                ${status === 'success' ? 'bg-green-500' : 'bg-[#FE2C55] hover:bg-[#E6284D]'}
-                                                ${(status !== 'idle' && status !== 'error') ? 'opacity-70 cursor-wait' : ''}
-                                            `}
-                                        >
-                                            {status === 'idle' || status === 'error' ? '发布' :
-                                                status === 'success' ? '发布成功' :
-                                                    <span className="flex items-center"><Loader2 className="animate-spin mr-2" size={16} /> 发布中</span>
-                                            }
-                                        </button>
-                                    </div>
+                                <div className="flex space-x-3">
+                                    <button
+                                        onClick={onClose}
+                                        className="px-6 py-2.5 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-800 transition-colors"
+                                    >
+                                        取消
+                                    </button>
+                                    <button
+                                        onClick={handleUpload}
+                                        disabled={!file || (status !== 'idle' && status !== 'error')}
+                                        className={`px-8 py-2.5 rounded-md text-sm font-medium text-white transition-all shadow-lg
+                                            ${status === 'success' ? 'bg-green-500' : 'bg-[#FE2C55] hover:bg-[#E6284D]'}
+                                            ${(!file || (status !== 'idle' && status !== 'error')) ? 'opacity-50 cursor-not-allowed' : ''}
+                                        `}
+                                    >
+                                        {status === 'idle' || status === 'error' ? '发布' :
+                                            status === 'success' ? '发布成功' :
+                                                <span className="flex items-center"><Loader2 className="animate-spin mr-2" size={16} /> 发布中</span>
+                                        }
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    )}
+                    </div>
                 </div>
+
             </div>
         </div>
     );
