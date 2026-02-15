@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import VideoOverlay from './VideoOverlay';
 import VideoSidebar from './VideoSidebar';
 import VolumeControl from './VolumeControl';
@@ -13,9 +13,45 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
     const { track } = useAnalytics();
 
 
+    const watchedMsRef = useRef(0);
+    const lastPlaybackSecRef = useRef(0);
+
+    const resetWatchSession = useCallback(() => {
+        watchedMsRef.current = 0;
+        lastPlaybackSecRef.current = videoRef.current?.currentTime || 0;
+    }, []);
+
+    const syncWatchProgress = useCallback(() => {
+        const videoEl = videoRef.current;
+        if (!videoEl) {
+            return;
+        }
+        const currentSec = videoEl.currentTime || 0;
+        const deltaSec = currentSec - lastPlaybackSecRef.current;
+        if (deltaSec > 0) {
+            watchedMsRef.current += deltaSec * 1000;
+        }
+        lastPlaybackSecRef.current = currentSec;
+    }, []);
+
+    const reportLeave = useCallback(() => {
+        syncWatchProgress();
+        const watchMs = Math.floor(watchedMsRef.current);
+        if (watchMs > 100) {
+            track('LEAVE', video.id, {}, { watchMs });
+        }
+        resetWatchSession();
+    }, [resetWatchSession, syncWatchProgress, track, video.id]);
+
     useEffect(() => {
+        const videoEl = videoRef.current;
+        if (!videoEl) {
+            return;
+        }
+
         if (isActive) {
-            const playPromise = videoRef.current.play();
+            resetWatchSession();
+            const playPromise = videoEl.play();
             if (playPromise !== undefined) {
                 playPromise.then(_ => {
                     setPlaying(true);
@@ -25,29 +61,60 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
                 });
             }
         } else {
-            videoRef.current.pause();
+            videoEl.pause();
             setPlaying(false);
-            videoRef.current.currentTime = 0; // Reset video when scrolled away
+            videoEl.currentTime = 0;
+            resetWatchSession();
         }
-    }, [isActive]);
+
+        return () => {
+            if (isActive) {
+                reportLeave();
+            }
+        };
+    }, [isActive, reportLeave, resetWatchSession]);
 
     const handleVideoPress = () => {
-        if (playing) {
-            videoRef.current.pause();
-            setPlaying(false);
+        const videoEl = videoRef.current;
+        if (!videoEl) {
+            return;
+        }
+
+        if (videoEl.paused) {
+            lastPlaybackSecRef.current = videoEl.currentTime || 0;
+            const playPromise = videoEl.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    setPlaying(true);
+                }).catch(err => {
+                    console.error("Play failed:", err);
+                    setPlaying(false);
+                });
+            }
         } else {
-            videoRef.current.play();
-            setPlaying(true);
+            syncWatchProgress();
+            videoEl.pause();
+            setPlaying(false);
         }
     };
 
+    const handleTimeUpdate = () => {
+        syncWatchProgress();
+    };
+
     const handleEnded = () => {
-        // Track finish event
-        track('FINISH', video.id);
+        const videoEl = videoRef.current;
+        if (!videoEl) {
+            return;
+        }
+        syncWatchProgress();
+        const watchMs = Math.floor(watchedMsRef.current);
+        track('FINISH', video.id, {}, { watchMs });
+        resetWatchSession();
 
         // Manually loop the video
-        videoRef.current.currentTime = 0;
-        videoRef.current.play().then(() => {
+        videoEl.currentTime = 0;
+        videoEl.play().then(() => {
             setPlaying(true);
         }).catch(err => {
             console.error("Manual loop failed:", err);
@@ -75,6 +142,7 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
             <video
                 ref={videoRef}
                 onClick={handleVideoPress}
+                onTimeUpdate={handleTimeUpdate}
                 onEnded={handleEnded}
                 className={`w-full h-full relative z-[1] transition-all duration-300 ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}`}
                 src={getMediaUrl(video.videoUrl)}

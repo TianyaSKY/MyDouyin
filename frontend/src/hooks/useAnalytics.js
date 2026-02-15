@@ -5,7 +5,7 @@ import { reportEvent } from '../api/event';
 export const useAnalytics = () => {
     const { token, user } = useAuthContext();
 
-    const track = useCallback((eventType, videoId, extraCtx = {}) => {
+    const track = useCallback((eventType, videoId, extraCtx = {}, extraPayload = {}) => {
         if (!token || !user) return;
 
         const payload = {
@@ -14,6 +14,7 @@ export const useAnalytics = () => {
             eventType: eventType,
             ts: new Date().toISOString(),
             tsMs: Date.now(),
+            ...extraPayload,
             // Ensure context matches backend expectation (Map<String, Object>)
             ctx: {
                 userAgent: navigator.userAgent,
