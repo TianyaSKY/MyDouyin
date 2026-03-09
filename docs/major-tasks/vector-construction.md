@@ -36,13 +36,13 @@ recommend 侧实现：
 - 消费者为 `backend/src/main/java/com/douyin/client/UserEventConsumer.java`。
 
 处理流程：
-1. 落库原始 `user_event`。
-2. 更新 `video_stats_daily` 聚合统计。
+1. 落库原始 `user_events`。
+2. 更新 `video_daily_stats` 聚合统计。
 3. 对 `CLICK/LIKE/FINISH/SHARE` 触发 `UserEmbeddingService.updateRealtimeVector(...)`。
 
 实时向量计算（后端）：
 - 实现在 `backend/src/main/java/com/douyin/service/impl/UserEmbeddingServiceImpl.java`。
-- 从 `user_event` 读取最近 50 条行为。
+- 从 `user_events` 读取最近 50 条行为。
 - 批量拿视频向量后，构造含 `video_embedding/event_type/timestamp/timestamp_ms` 的事件数据。
 - 调 recommend 的 `/api/embedding/user` 计算用户向量。
 - 结果缓存到 Redis：`user:vec:{userId}`，过期时间 24 小时。

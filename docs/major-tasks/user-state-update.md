@@ -4,10 +4,10 @@
 
 项目里的用户行为状态分两层：
 
-- 真相状态表：`user_video_action`
+- 真相状态表：`user_video_relations`
   - 表示“当前状态”（例如当前是否点赞）
   - 用于点赞/取消点赞幂等控制
-- 行为事件表：`user_event`
+- 行为事件表：`user_events`
   - 记录“发生过什么”（行为时间线）
   - 用于统计聚合、推荐特征、向量更新
 
@@ -46,8 +46,8 @@
 - `backend/src/main/java/com/douyin/client/UserEventConsumer.java`
 
 消费后的更新动作：
-1. 原始事件落库到 `user_event`。
-2. 更新 `video_stats_daily` 聚合计数。
+1. 原始事件落库到 `user_events`。
+2. 更新 `video_daily_stats` 聚合计数。
 3. 对 `CLICK/LIKE/FINISH/SHARE` 触发用户实时向量更新。
 
 ## 4. Feed 运行时用户状态
@@ -65,6 +65,6 @@
 
 ## 5. 一致性建议
 
-- 当前是否点赞，必须以 `user_video_action` 为准。
-- `user_event` 不作为当前状态真相，只作为行为流水与特征来源。
-- 推荐、统计、热度都应以 `user_event`/`video_stats_daily` 为主。
+- 当前是否点赞，必须以 `user_video_relations` 为准。
+- `user_events` 不作为当前状态真相，只作为行为流水与特征来源。
+- 推荐、统计、热度都应以 `user_events`/`video_daily_stats` 为主。

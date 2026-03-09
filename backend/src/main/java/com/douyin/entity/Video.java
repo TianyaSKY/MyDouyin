@@ -12,10 +12,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Maps to `video` table.
+ * Maps to `videos` table.
  */
 @Data
-@TableName(value = "video", autoResultMap = true)
+@TableName(value = "videos", autoResultMap = true)
 public class Video {
 
     @TableId(type = IdType.AUTO)

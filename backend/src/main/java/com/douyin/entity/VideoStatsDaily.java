@@ -6,11 +6,11 @@ import lombok.Data;
 import java.time.LocalDate;
 
 /**
- * Maps to `video_stats_daily` table.
+ * Maps to `video_daily_stats` table.
  * Composite primary key: (video_id, date).
  */
 @Data
-@TableName("video_stats_daily")
+@TableName("video_daily_stats")
 public class VideoStatsDaily {
 
     private Long videoId;

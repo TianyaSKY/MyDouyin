@@ -7,7 +7,7 @@ import lombok.Getter;
 import java.util.Arrays;
 
 /**
- * User event type enum, maps to `user_event.event_type` ENUM column.
+ * User event type enum, maps to `user_events.event_type` ENUM column.
  */
 @Getter
 public enum EventType {

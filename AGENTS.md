@@ -6,7 +6,7 @@
 
 - `backend/`（Spring Boot, 默认端口 `18081`）
   - 对外 API、鉴权、视频元数据管理
-  - 点赞状态幂等（`user_video_action` 真相表）
+  - 点赞状态幂等（`user_video_relations` 真相表）
   - 分片上传（init/chunk/complete）
   - Feed 多路召回 + 粗排
   - 通过 RabbitMQ 异步触发视频 embedding
@@ -76,9 +76,9 @@
 ### 3.3 点赞幂等与统计
 
 1. 前端调用 `POST /api/videos/{id}/like` / `DELETE /api/videos/{id}/like`。
-2. backend 以 `user_video_action`（唯一键：`user_id, video_id, action_type`）作为点赞状态真相来源。
+2. backend 以 `user_video_relations`（唯一键：`user_id, video_id, action_type`）作为点赞状态真相来源。
 3. 只有点赞状态从未点赞 -> 已点赞时，才发送 `LIKE` 事件到 MQ。
-4. `UserEventConsumer` 消费事件后增量更新 `video_stats_daily`，用于展示与热度计算。
+4. `UserEventConsumer` 消费事件后增量更新 `video_daily_stats`，用于展示与热度计算。
 
 ## 4. 接口与跨服务契约（高优先级规则）
 

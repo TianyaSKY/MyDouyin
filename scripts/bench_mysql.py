@@ -4,7 +4,7 @@
 MySQL 响应速度压测脚本。
 
 默认执行「业务读」SQL:
-  SELECT id, title FROM video ORDER BY id DESC LIMIT 20
+  SELECT id, title FROM videos ORDER BY id DESC LIMIT 20
 
 可通过 --write-ratio 混入写入请求（写入到连接级临时表，不污染业务表）。
 """
@@ -47,7 +47,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--query-timeout", type=int, default=10, help="读写超时（秒）")
     parser.add_argument(
         "--read-sql",
-        default="SELECT id, title FROM video ORDER BY id DESC LIMIT 20",
+        default="SELECT id, title FROM videos ORDER BY id DESC LIMIT 20",
         help="读请求 SQL（默认查视频列表）",
     )
     parser.add_argument("--seed", type=int, default=42, help="随机种子（用于可复现实验）")

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.EnumValue;
 import lombok.Getter;
 
 /**
- * Video status enum, maps to `video.status` TINYINT column.
+ * Video status enum, maps to `videos.status` TINYINT column.
  */
 @Getter
 public enum VideoStatus {

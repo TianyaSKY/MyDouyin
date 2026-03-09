@@ -8,7 +8,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("file_asset")
+@TableName("media_files")
 public class FileAsset {
 
     @TableId(type = IdType.AUTO)

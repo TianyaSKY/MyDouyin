@@ -12,10 +12,10 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Maps to `user_event` table.
+ * Maps to `user_events` table.
  */
 @Data
-@TableName(value = "user_event", autoResultMap = true)
+@TableName(value = "user_events", autoResultMap = true)
 public class UserEvent {
 
     @TableId(type = IdType.AUTO)

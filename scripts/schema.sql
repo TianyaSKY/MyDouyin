@@ -3,8 +3,8 @@
 CREATE DATABASE IF NOT EXISTS douyin;
 USE douyin;
 
--- 1. User Profile
-CREATE TABLE IF NOT EXISTS user_profile (
+-- 1. Users
+CREATE TABLE IF NOT EXISTS users (
     user_id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
     username VARCHAR(64) NOT NULL UNIQUE COMMENT '用户名',
     password VARCHAR(255) NOT NULL COMMENT '加密后的密码',
@@ -12,10 +12,10 @@ CREATE TABLE IF NOT EXISTS user_profile (
     avatar_url VARCHAR(512) NULL COMMENT '头像URL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) COMMENT '用户个人资料表（向量已迁移到 Milvus）';
+) COMMENT '用户主表';
 
--- 2. Video Metadata
-CREATE TABLE IF NOT EXISTS video (
+-- 2. Videos
+CREATE TABLE IF NOT EXISTS videos (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '视频ID',
     author_id BIGINT NOT NULL COMMENT '作者ID',
     title VARCHAR(255) NOT NULL COMMENT '视频标题',
@@ -28,9 +28,9 @@ CREATE TABLE IF NOT EXISTS video (
     INDEX idx_created_at (created_at)
 ) COMMENT '视频元数据表';
 
--- 3. Video Stats Daily (Aggregated counters)
+-- 3. Video Daily Stats (Aggregated counters)
 -- In production, this might be written from Redis to DB periodically
-CREATE TABLE IF NOT EXISTS video_stats_daily (
+CREATE TABLE IF NOT EXISTS video_daily_stats (
     video_id BIGINT NOT NULL COMMENT '视频ID',
     date DATE NOT NULL COMMENT '统计日期',
     impr_cnt INT DEFAULT 0 COMMENT '曝光次数',
@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS video_stats_daily (
     PRIMARY KEY (video_id, date)
 ) COMMENT '视频每日统计表';
 
--- 4. User Event (Raw interaction logs for training)
-CREATE TABLE IF NOT EXISTS user_event (
+-- 4. User Events (Raw interaction logs for training)
+CREATE TABLE IF NOT EXISTS user_events (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
     video_id BIGINT NOT NULL COMMENT '视频ID',
@@ -55,8 +55,8 @@ CREATE TABLE IF NOT EXISTS user_event (
     INDEX idx_ts (ts)
 ) COMMENT '用户行为日志表';
 
--- 5. User-Video Action State (source of truth for idempotent like/share/follow actions)
-CREATE TABLE IF NOT EXISTS user_video_action (
+-- 5. User-Video Relation State (source of truth for idempotent like/favorite actions)
+CREATE TABLE IF NOT EXISTS user_video_relations (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
     video_id BIGINT NOT NULL COMMENT '视频ID',
@@ -64,14 +64,14 @@ CREATE TABLE IF NOT EXISTS user_video_action (
     status TINYINT NOT NULL DEFAULT 1 COMMENT '状态(1:生效, 0:取消)',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    UNIQUE KEY uk_user_video_action (user_id, video_id, action_type),
+    UNIQUE KEY uk_user_video_relation (user_id, video_id, action_type),
     INDEX idx_user_action_status (user_id, action_type, status),
     INDEX idx_video_action_status (video_id, action_type, status),
     INDEX idx_updated_at (updated_at)
-) COMMENT '用户-视频行为状态表(幂等真相表)';
+) COMMENT '用户-视频关系状态表(幂等真相表)';
 
--- 6. File Asset (for hash instant upload)
-CREATE TABLE IF NOT EXISTS file_asset (
+-- 6. Media Files (for hash instant upload)
+CREATE TABLE IF NOT EXISTS media_files (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     file_hash VARCHAR(64) NOT NULL COMMENT '文件哈希值(MD5/SHA-256)',
     file_size BIGINT NOT NULL COMMENT '文件大小',
@@ -79,4 +79,4 @@ CREATE TABLE IF NOT EXISTS file_asset (
     video_url VARCHAR(512) NOT NULL COMMENT '视频存储URL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     UNIQUE KEY uk_file_hash (file_hash)
-) COMMENT '文件资源表(用于秒传)';
+) COMMENT '媒体文件登记表(用于秒传)';

@@ -18,8 +18,9 @@
     - 扫描本地视频与封面
     - 按文件名解析标题/标签
     - 复制到 `storage/videos`、`storage/covers`
-    - 写入 `video`、`file_asset`
-    - 向 Milvus 写入视频向量（当前为占位全零向量）
+    - 写入 `videos`、`media_files`
+    - 调用 recommend 服务生成视频 embedding
+    - 通过 recommend 服务写入 Milvus `video_embedding`
 
 - `requirements.txt`
   - `scripts` 目录脚本所需 Python 依赖（如 `pymilvus`、`pymysql`、`redis`）。

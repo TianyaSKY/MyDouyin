@@ -15,7 +15,7 @@
 - 全量 `PUBLISHED` 状态视频。
 
 统计来源：
-- 每个视频最新一条 `video_stats_daily`。
+- 每个视频最新一条 `video_daily_stats`。
 
 热度公式：
 - `like_cnt * 2 + finish_cnt * 3 + share_cnt * 5 - time_decay`
@@ -50,5 +50,5 @@ Redis key：
 
 当热门池结果异常时，优先检查：
 - `HotVideoScheduler` 是否按时执行。
-- `UserEventConsumer` 是否持续更新 `video_stats_daily`。
+- `UserEventConsumer` 是否持续更新 `video_daily_stats`。
 - Redis 中 `video:hot` 的基数与头部 score 是否合理。
