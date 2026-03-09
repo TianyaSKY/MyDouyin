@@ -3,7 +3,7 @@
 """
 本地视频批量入库脚本
 ===================
-将本地视频文件（含封面图）导入 Douyin 数据库。
+将本地视频文件（含封面图）导入 Douyin 数据库，并为视频生成 embedding 后写入 Milvus。
 
 文件命名约定:
   视频:  1-可爱女人【1st JAY】-480P 标清-AVC.mp4
@@ -12,7 +12,7 @@
 用法:
     python import_local_videos.py --source <视频目录>  [选项]
     # 先安装依赖
-    pip install pymysql
+    pip install pymysql requests
 
     # 预览模式（不执行，只看解析结果）
     python scripts/import_local_videos.py --source "E:\你的视频目录" --dry-run
@@ -29,16 +29,19 @@
   3. 从文件名解析出标题和标签（【…】中的内容）
   4. 计算文件 MD5 用于秒传去重
   5. 复制文件到 storage/videos/ 和 storage/covers/
-  6. 向 Milvus video_embedding 集合写入全零 128 维向量
-  7. 写入 video 表和 file_asset 表
+  6. 调 recommend 服务生成真实视频 embedding
+  7. 通过 recommend 服务写入 Milvus `video_embedding`
+  8. 写入 videos 表和 media_files 表
 """
 
 import argparse
 import hashlib
+import json
 import os
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -48,9 +51,9 @@ except ImportError:
     sys.exit(1)
 
 try:
-    from pymilvus import connections, Collection
+    import requests
 except ImportError:
-    print("需要安装 pymilvus：pip install pymilvus")
+    print("需要安装 requests：pip install requests")
     sys.exit(1)
 
 
@@ -91,9 +94,8 @@ COVER_DIR_NAME = "covers"
 VIDEO_URL_PREFIX = "/uploads/videos/"
 COVER_URL_PREFIX = "/uploads/covers/"
 
-# Milvus 配置
-MILVUS_COLLECTION = "video_embedding"
-MILVUS_DIM = 128  # 向量维度，与 init_milvus.py 一致
+EMBEDDING_DIM = 128
+DEFAULT_RECOMMEND_URL = os.getenv("RECOMMEND_SERVICE_URL", "http://localhost:18101")
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".flv", ".avi", ".mov", ".webm"}
 COVER_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -177,10 +179,10 @@ def copy_file_with_hash(src: Path, dest_dir: Path, file_hash: str) -> str:
 
 # ──────────── 数据库操作 ────────────
 
-def insert_file_asset(cursor, file_hash: str, file_size: int, file_name: str, video_url: str):
-    """插入 file_asset 表（秒传去重），如果已存在则跳过"""
+def insert_media_file(cursor, file_hash: str, file_size: int, file_name: str, video_url: str):
+    """插入 media_files 表（秒传去重），如果已存在则跳过"""
     sql = """
-        INSERT IGNORE INTO file_asset (file_hash, file_size, file_name, video_url)
+        INSERT IGNORE INTO media_files (file_hash, file_size, file_name, video_url)
         VALUES (%s, %s, %s, %s)
     """
     cursor.execute(sql, (file_hash, file_size, file_name, video_url))
@@ -188,44 +190,89 @@ def insert_file_asset(cursor, file_hash: str, file_size: int, file_name: str, vi
 
 def insert_video(cursor, author_id: int, title: str, tags: list, cover_url: str, video_url: str, status: int = 1):
     """
-    插入 video 表。status: 0=审核中, 1=已发布, 2=已删除
+    插入 videos 表。status: 0=审核中, 1=已发布, 2=已删除
     返回插入的 video id
     """
-    import json
     sql = """
-        INSERT INTO video (author_id, title, tags, status, cover_url, video_url)
+        INSERT INTO videos (author_id, title, tags, status, cover_url, video_url)
         VALUES (%s, %s, %s, %s, %s, %s)
     """
     cursor.execute(sql, (author_id, title, json.dumps(tags, ensure_ascii=False), status, cover_url, video_url))
     return cursor.lastrowid
 
 
-def insert_milvus_embedding(collection, video_id: int, author_id: int, created_ts: int):
-    """向 Milvus 写入全零向量"""
-    data = [
-        [video_id],                          # video_id
-        [[0.0] * MILVUS_DIM],                # embedding (全零 128 维)
-        [author_id],                         # author_id
-        [created_ts],                        # created_ts
-    ]
-    collection.insert(data)
+def generate_video_embedding(
+    recommend_url: str,
+    timeout_seconds: int,
+    video_id: int,
+    title: str,
+    tags: list[str],
+    cover_url: str,
+    video_url: str,
+) -> list[float]:
+    """调用 recommend 服务生成视频 embedding。"""
+    payload = {
+        "video_id": video_id,
+        "title": title,
+        "tags": tags,
+        "cover_url": cover_url or None,
+        "video_url": video_url,
+    }
+    response = requests.post(
+        f"{recommend_url.rstrip('/')}/api/embedding/video",
+        json=payload,
+        timeout=timeout_seconds,
+    )
+    response.raise_for_status()
+    data = response.json()
+    embedding = data.get("embedding")
+    if not isinstance(embedding, list) or len(embedding) != EMBEDDING_DIM:
+        raise ValueError(f"embedding 维度异常: {0 if embedding is None else len(embedding)}")
+    return [float(item) for item in embedding]
+
+
+def insert_video_embedding(
+    recommend_url: str,
+    timeout_seconds: int,
+    video_id: int,
+    embedding: list[float],
+    author_id: int,
+    created_ts_ms: int,
+) -> None:
+    """调用 recommend 服务将视频 embedding 写入 Milvus。"""
+    payload = {
+        "video_id": video_id,
+        "embedding": embedding,
+        "author_id": author_id,
+        "created_ts": created_ts_ms,
+    }
+    response = requests.post(
+        f"{recommend_url.rstrip('/')}/api/embedding/video/insert",
+        json=payload,
+        timeout=timeout_seconds,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not data.get("success"):
+        raise ValueError(f"Milvus 写入失败: {data}")
 
 
 # ──────────── 主流程 ────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="本地视频批量入库脚本")
+    parser = argparse.ArgumentParser(description="本地视频批量入库脚本（含 embedding 入库）")
     parser.add_argument("--source", "-s", required=True, help="视频文件所在目录")
     parser.add_argument("--author-id", "-a", type=int, default=1, help="作者用户ID (默认: 1)")
-    parser.add_argument("--status", type=int, default=1, choices=[0, 1], help="视频状态: 0=审核中, 1=已发布 (默认: 1)")
+    parser.add_argument("--status", type=int, default=1, choices=[0, 1, 2], help="视频状态: 0=审核中, 1=已发布, 2=已删除 (默认: 1)")
     parser.add_argument("--storage", default=None, help="storage 根目录 (默认: 项目下的 storage/)")
+    parser.add_argument("--recursive", action="store_true", help="递归扫描 source 目录下的所有视频")
+    parser.add_argument("--recommend-url", default=DEFAULT_RECOMMEND_URL, help="recommend 服务地址")
+    parser.add_argument("--request-timeout", type=int, default=180, help="recommend 请求超时（秒）")
     parser.add_argument("--db-host", default=DEFAULT_DB_CONFIG["host"], help="MySQL 主机")
     parser.add_argument("--db-port", type=int, default=DEFAULT_DB_CONFIG["port"], help="MySQL 端口")
     parser.add_argument("--db-user", default=DEFAULT_DB_CONFIG["user"], help="MySQL 用户名")
     parser.add_argument("--db-password", default=DEFAULT_DB_CONFIG["password"], help="MySQL 密码")
     parser.add_argument("--db-name", default=DEFAULT_DB_CONFIG["database"], help="数据库名")
-    parser.add_argument("--milvus-host", default=os.getenv("MILVUS_HOST", "localhost"), help="Milvus 主机")
-    parser.add_argument("--milvus-port", default=os.getenv("MILVUS_PORT", "19530"), help="Milvus 端口")
     parser.add_argument("--dry-run", action="store_true", help="仅预览，不实际执行")
     args = parser.parse_args()
 
@@ -248,9 +295,10 @@ def main():
     cover_dest.mkdir(parents=True, exist_ok=True)
 
     # 扫描视频文件
+    scan_iter = source_dir.rglob("*") if args.recursive else source_dir.iterdir()
     video_files = sorted(
-        [f for f in source_dir.iterdir() if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS],
-        key=lambda p: p.name,
+        [f for f in scan_iter if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS],
+        key=lambda p: str(p.relative_to(source_dir)).lower(),
     )
 
     if not video_files:
@@ -298,13 +346,6 @@ def main():
     )
     cursor = conn.cursor()
 
-    # 连接 Milvus
-    print(f"连接 Milvus ({args.milvus_host}:{args.milvus_port})...")
-    connections.connect("default", host=args.milvus_host, port=args.milvus_port)
-    milvus_collection = Collection(MILVUS_COLLECTION)
-    milvus_collection.load()
-    print("Milvus 连接成功\n")
-
     success_count = 0
     error_count = 0
 
@@ -329,11 +370,11 @@ def main():
                 cover_final_name = copy_file_with_hash(cf, cover_dest, cover_hash)
                 cover_url = COVER_URL_PREFIX + cover_final_name
 
-            # 3. 写入 file_asset 表
+            # 3. 写入 media_files 表
             video_size = vf.stat().st_size
-            insert_file_asset(cursor, video_hash, video_size, vf.name, video_url)
+            insert_media_file(cursor, video_hash, video_size, vf.name, video_url)
 
-            # 4. 写入 video 表
+            # 4. 写入 videos 表
             video_id = insert_video(
                 cursor,
                 author_id=args.author_id,
@@ -343,10 +384,28 @@ def main():
                 video_url=video_url,
                 status=args.status,
             )
-            # 5. 写入 Milvus 全零向量
-            import time
-            created_ts = int(time.time())
-            insert_milvus_embedding(milvus_collection, video_id, args.author_id, created_ts)
+
+            # 5. 生成 embedding 并写入 Milvus
+            embedding = generate_video_embedding(
+                recommend_url=args.recommend_url,
+                timeout_seconds=args.request_timeout,
+                video_id=video_id,
+                title=title,
+                tags=info["tags"],
+                cover_url=cover_url,
+                video_url=video_url,
+            )
+            created_ts_ms = int(time.time() * 1000)
+            insert_video_embedding(
+                recommend_url=args.recommend_url,
+                timeout_seconds=args.request_timeout,
+                video_id=video_id,
+                embedding=embedding,
+                author_id=args.author_id,
+                created_ts_ms=created_ts_ms,
+            )
+
+            conn.commit()
 
             print(f"  ✅ 入库成功 video_id={video_id}, title={title}\n")
             success_count += 1
@@ -357,11 +416,8 @@ def main():
             conn.rollback()
             continue
 
-    conn.commit()
     cursor.close()
     conn.close()
-    milvus_collection.flush()
-    connections.disconnect("default")
 
     print("=" * 50)
     print(f"导入完成! 成功: {success_count}, 失败: {error_count}")
