@@ -10,7 +10,7 @@
     - `video_embedding`
     - `user_long_term_vectors`
     - `user_interest_vectors`
-  - 向量维度按当前实现为 `128`。
+  - 向量维度按当前实现为 `1024`。
 
 - `import_local_videos.py`
   - 将本地视频批量导入到项目数据中。
@@ -35,7 +35,7 @@
 
 - `bench_milvus_query.py`
   - Milvus 查询性能压测（`video_embedding` 检索）。
-  - 默认参数对齐当前实现：`embedding` 字段、`COSINE`、`dim=128`、`ef=64`。
+  - 默认参数对齐当前实现：`embedding` 字段、`COSINE`、`dim=1024`、`ef=64`。
   - 可输出 P50/P95/P99 延迟、RPS、平均命中数。
 
 - `bench_mysql.py`

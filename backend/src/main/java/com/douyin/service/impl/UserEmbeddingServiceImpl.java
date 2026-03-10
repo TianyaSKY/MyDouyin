@@ -37,7 +37,7 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
     private final RecommendServiceClient recommendServiceClient;
 
     private static final String USER_VECTOR_KEY_PREFIX = "user:vec:";
-    private static final int VECTOR_DIM = 128;
+    private static final int VECTOR_DIM = 1024;
     private static final int RECENT_EVENTS_LIMIT = 50;
     private static final int VECTOR_EXPIRE_HOURS = 24;
     private static final ZoneId EVENT_TIME_ZONE = ZoneId.of("Asia/Shanghai");

@@ -15,7 +15,7 @@ async def vector_recall(request: VectorRecallRequest):
     向量召回 - 根据用户向量搜索相似视频
 
     - **user_id**: 用户ID
-    - **user_vector**: 用户向量 (128维)
+    - **user_vector**: 用户向量 (1024维)
     - **top_k**: 返回Top K
     """
     user_id = request.user_id

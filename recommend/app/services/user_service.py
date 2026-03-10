@@ -6,9 +6,11 @@ import numpy as np
 import logging
 from typing import List, Dict, Optional
 from datetime import datetime, timezone
+from app.core.config import settings
 from app.services.model_service import model_manager
 
 logger = logging.getLogger(__name__)
+EMBEDDING_DIM = settings.EMBEDDING_DIM
 
 
 class UserEmbeddingService:
@@ -54,12 +56,12 @@ class UserEmbeddingService:
             recent_events: 最近的交互行为列表
             
         Returns:
-            128维用户向量
+            1024维用户向量
         """
         try:
             if not recent_events:
                 # 返回默认向量
-                return [0.0] * 128
+                return [0.0] * EMBEDDING_DIM
             
             # 1. 准备数据
             video_embeddings = []
@@ -68,7 +70,7 @@ class UserEmbeddingService:
             
             for event in recent_events:
                 video_emb = event.get("video_embedding", [])
-                if len(video_emb) != 128:
+                if len(video_emb) != EMBEDDING_DIM:
                     continue
                 
                 # 计算权重：行为权重 × 时间衰减
@@ -89,7 +91,7 @@ class UserEmbeddingService:
                 weights.append(final_weight)
             
             if not video_embeddings:
-                return [0.0] * 128
+                return [0.0] * EMBEDDING_DIM
             
             # 2. 转为 Tensor
             video_emb_tensor = torch.tensor(

@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # 模型配置
     MODEL_PATH: str = "./models"
-    EMBEDDING_DIM: int = 128
+    EMBEDDING_DIM: int = 1024
     TAG_VOCAB_SIZE: int = 10000
 
     # Redis 配置
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     # DashScope 多模态向量配置
     DASHSCOPE_API_KEY: str = ""
     DASHSCOPE_EMBEDDING_URL: str = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding"
-    DASHSCOPE_MULTIMODAL_MODEL: str = "tongyi-embedding-vision-plus"
+    DASHSCOPE_MULTIMODAL_MODEL: str = "qwen3-vl-embedding"
 
     @property
     def PORT(self) -> int:

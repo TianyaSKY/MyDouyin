@@ -26,7 +26,7 @@ import java.util.List;
 public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserProfile>
         implements UserProfileService {
 
-    private static final int VECTOR_DIM = 128;
+    private static final int VECTOR_DIM = 1024;
 
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;

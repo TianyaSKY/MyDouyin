@@ -7,7 +7,7 @@ Milvus 查询性能压测（video_embedding 检索）。
   - collection: video_embedding
   - anns field: embedding
   - metric: COSINE
-  - dim: 128
+  - dim: 1024
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--collection", default="video_embedding", help="Collection 名称")
     parser.add_argument("--anns-field", default="embedding", help="向量字段名")
     parser.add_argument("--output-field", default="video_id", help="输出字段（可空字符串）")
-    parser.add_argument("--dim", type=int, default=128, help="向量维度")
+    parser.add_argument("--dim", type=int, default=1024, help="向量维度")
     parser.add_argument("--top-k", type=int, default=100, help="TopK")
     parser.add_argument("--ef", type=int, default=64, help="HNSW ef 搜索参数")
     parser.add_argument("--requests", type=int, default=1000, help="总请求数")

@@ -33,7 +33,7 @@ load_root_env()
 # Configuration
 MILVUS_HOST = os.getenv("MILVUS_HOST", "localhost")
 MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
-DIM = 128  # 向量维度
+DIM = 1024  # 向量维度
 
 
 def init_milvus():
@@ -77,7 +77,7 @@ def create_video_collection():
             name="embedding",
             dtype=DataType.FLOAT_VECTOR,
             dim=DIM,
-            description="Video vector (128d)",
+            description="Video vector (1024d)",
         ),
         FieldSchema(
             name="author_id",
@@ -145,7 +145,7 @@ def create_single_user_vector_collection(collection_name, description):
             name="vector",
             dtype=DataType.FLOAT_VECTOR,
             dim=DIM,
-            description="User vector (128d)",
+            description="User vector (1024d)",
         ),
         FieldSchema(
             name="updated_at",

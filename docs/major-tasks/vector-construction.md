@@ -13,7 +13,7 @@
 处理流程：
 1. 根据 `videoId` 从 MySQL 读取视频信息。
 2. 通过 `RecommendServiceClient.generateVideoEmbedding(...)` 调 recommend 的 `/api/embedding/video` 生成向量。
-3. 校验向量维度必须为 `128`。
+3. 校验向量维度必须为 `1024`。
 4. 通过 `RecommendServiceClient.insertVideoEmbedding(...)` 调 recommend 的 `/api/embedding/video/insert` 写入 Milvus。
 5. 写入成功后，视频状态可从 `REVIEW` 自动切换到 `PUBLISHED`。
 6. 写入 Redis 幂等标记 `video:embedding:done:{videoId}`，避免重复消费。
@@ -72,5 +72,5 @@ recommend 侧实现：
 - `user_interest_vectors`
 
 维度约束：
-- 用户向量和视频向量均为固定 `128` 维。
+- 用户向量和视频向量均为固定 `1024` 维。
 - 维度校验存在于后端消费/服务层与 recommend schema/服务层。

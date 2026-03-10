@@ -94,7 +94,7 @@ COVER_DIR_NAME = "covers"
 VIDEO_URL_PREFIX = "/uploads/videos/"
 COVER_URL_PREFIX = "/uploads/covers/"
 
-EMBEDDING_DIM = 128
+EMBEDDING_DIM = 1024
 DEFAULT_RECOMMEND_URL = os.getenv("RECOMMEND_SERVICE_URL", "http://localhost:18101")
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".flv", ".avi", ".mov", ".webm"}

@@ -10,6 +10,7 @@ import time
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+EMBEDDING_DIM = settings.EMBEDDING_DIM
 
 
 class MilvusService:
@@ -84,8 +85,8 @@ class MilvusService:
 
         Args:
             user_id: 用户ID
-            long_term_vec: 长期兴趣向量 (128维)
-            interest_vec: 初始兴趣向量 (128维)
+            long_term_vec: 长期兴趣向量 (1024维)
+            interest_vec: 初始兴趣向量 (1024维)
 
         Returns:
             是否成功
@@ -95,7 +96,7 @@ class MilvusService:
                 self._connect()
 
             # 检查向量维度
-            if len(long_term_vec) != 128 or len(interest_vec) != 128:
+            if len(long_term_vec) != EMBEDDING_DIM or len(interest_vec) != EMBEDDING_DIM:
                 logger.error(f"Invalid vector dimension for user {user_id}")
                 return False
 
@@ -148,10 +149,10 @@ class MilvusService:
                 return None
 
             result = {
-                "long_term_vec": res_long[0]["vector"] if res_long else [0.0] * 128,
+                "long_term_vec": res_long[0]["vector"] if res_long else [0.0] * EMBEDDING_DIM,
                 "interest_vec": res_interest[0]["vector"]
                 if res_interest
-                else [0.0] * 128,
+                else [0.0] * EMBEDDING_DIM,
                 "updated_at": res_long[0]["updated_at"]
                 if res_long
                 else (res_interest[0]["updated_at"] if res_interest else 0),
@@ -170,7 +171,7 @@ class MilvusService:
 
         Args:
             user_id: 用户ID
-            long_term_vec: 新的长期兴趣向量 (128维)
+            long_term_vec: 新的长期兴趣向量 (1024维)
 
         Returns:
             是否成功
@@ -180,7 +181,7 @@ class MilvusService:
                 self._connect()
 
             # 检查向量维度
-            if len(long_term_vec) != 128:
+            if len(long_term_vec) != EMBEDDING_DIM:
                 logger.error(f"Invalid vector dimension for user {user_id}")
                 return False
 
@@ -210,7 +211,7 @@ class MilvusService:
         搜索相似用户（协同过滤）
 
         Args:
-            user_vector: 查询向量 (128维)
+            user_vector: 查询向量 (1024维)
             top_k: 返回前K个相似用户
             use_long_term: 是否使用长期向量（否则使用初始兴趣向量）
 
@@ -227,7 +228,7 @@ class MilvusService:
             collection = Collection(collection_name)
 
             # 检查向量维度
-            if len(user_vector) != 128:
+            if len(user_vector) != EMBEDDING_DIM:
                 logger.error("Invalid query vector dimension")
                 return []
 
@@ -265,7 +266,7 @@ class MilvusService:
         向量召回：根据用户向量搜索相似视频
 
         Args:
-            query_vector: 用户向量 (128维)
+            query_vector: 用户向量 (1024维)
             top_k: 返回前K个视频
 
         Returns:
@@ -278,7 +279,7 @@ class MilvusService:
             collection = Collection("video_embedding")
 
             # 检查向量维度
-            if len(query_vector) != 128:
+            if len(query_vector) != EMBEDDING_DIM:
                 logger.error("Invalid query vector dimension")
                 return []
 
@@ -324,7 +325,7 @@ class MilvusService:
 
         Args:
             video_id: 视频ID
-            embedding: 视频向量 (128维)
+            embedding: 视频向量 (1024维)
             author_id: 作者ID
             created_ts: 创建时间戳
 
@@ -338,7 +339,7 @@ class MilvusService:
             collection = Collection("video_embedding")
 
             # 检查向量维度
-            if len(embedding) != 128:
+            if len(embedding) != EMBEDDING_DIM:
                 logger.error(f"Invalid embedding dimension for video {video_id}")
                 return False
 

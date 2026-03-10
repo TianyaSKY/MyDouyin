@@ -24,7 +24,7 @@ class TmperUploadService:
         response = requests.post(
             settings.TMPER_UPLOAD_URL,
             files=files,
-            timeout=30,
+            timeout=120,
         )
         response.raise_for_status()
         return response.json()

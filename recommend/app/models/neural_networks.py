@@ -10,9 +10,9 @@ class VideoEncoder(nn.Module):
     视频编码器 - 将视频特征编码为向量
     
     输入: 视频标签ID
-    输出: 128维向量
+    输出: 1024维向量
     """
-    def __init__(self, tag_vocab_size=10000, embedding_dim=128):
+    def __init__(self, tag_vocab_size=10000, embedding_dim=1024):
         super(VideoEncoder, self).__init__()
         self.tag_embedding = nn.Embedding(tag_vocab_size, 64)
         self.fc = nn.Sequential(
@@ -32,7 +32,7 @@ class VideoEncoder(nn.Module):
         """
         tag_emb = self.tag_embedding(tag_ids)  # [batch_size, max_tags, 64]
         tag_emb = torch.mean(tag_emb, dim=1)   # [batch_size, 64]
-        output = self.fc(tag_emb)              # [batch_size, 128]
+        output = self.fc(tag_emb)              # [batch_size, embedding_dim]
         return output
 
 
@@ -43,7 +43,7 @@ class UserEncoder(nn.Module):
     输入: 用户交互的视频向量 + 权重
     输出: 用户向量
     """
-    def __init__(self, embedding_dim=128):
+    def __init__(self, embedding_dim=1024):
         super(UserEncoder, self).__init__()
         self.fc = nn.Sequential(
             nn.Linear(embedding_dim, 256),
@@ -61,8 +61,8 @@ class UserEncoder(nn.Module):
         Returns:
             user_embedding: [batch_size, embedding_dim]
         """
-        weighted_emb = video_embeddings * weights  # [batch_size, num_videos, 128]
-        user_emb = torch.sum(weighted_emb, dim=1)  # [batch_size, 128]
+        weighted_emb = video_embeddings * weights  # [batch_size, num_videos, embedding_dim]
+        user_emb = torch.sum(weighted_emb, dim=1)  # [batch_size, embedding_dim]
         output = self.fc(user_emb)
         return output
 
@@ -74,7 +74,7 @@ class RankingModel(nn.Module):
     输入: 用户向量 + 视频向量 + 统计特征
     输出: 点击率预估 (0-1)
     """
-    def __init__(self, embedding_dim=128):
+    def __init__(self, embedding_dim=1024):
         super(RankingModel, self).__init__()
         
         # Deep 部分

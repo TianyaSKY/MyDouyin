@@ -24,6 +24,14 @@ class VideoEmbeddingService:
     _redis_client: Optional[redis.Redis] = None
 
     @staticmethod
+    def _truncate_for_log(value: Optional[str], max_length: int = 500) -> Optional[str]:
+        if value is None:
+            return None
+        if len(value) <= max_length:
+            return value
+        return f"{value[:max_length]}...(truncated, total={len(value)} chars)"
+
+    @staticmethod
     def _project_root() -> Path:
         return Path(__file__).resolve().parents[3]
 
@@ -48,6 +56,7 @@ class VideoEmbeddingService:
     def _get_cached_public_url(cls, local_ref: str) -> Optional[str]:
         value = cls._get_redis_client().get(cls._cache_key(local_ref))
         if isinstance(value, str) and value:
+            logger.info("Using cached public media URL for local_ref=%s", local_ref)
             return value
         return None
 
@@ -85,6 +94,10 @@ class VideoEmbeddingService:
         if not value:
             return None
         if value.startswith("http://") or value.startswith("https://"):
+            logger.info(
+                "Media is already a public URL: %s",
+                VideoEmbeddingService._truncate_for_log(value),
+            )
             return value
 
         cached_url = VideoEmbeddingService._get_cached_public_url(value)
@@ -111,6 +124,12 @@ class VideoEmbeddingService:
             ".webp": "image/webp",
         }
         content_type = content_type_map.get(suffix, "application/octet-stream")
+        logger.info(
+            "Uploading local media to tmper: path=%s size_bytes=%s content_type=%s",
+            local_path,
+            local_path.stat().st_size,
+            content_type,
+        )
         upload_result = tmper_upload_service.upload_file(
             filename=local_path.name,
             content=content,
@@ -120,6 +139,11 @@ class VideoEmbeddingService:
         if not public_url:
             raise ValueError("tmper upload success but no url in response")
         public_url = str(public_url)
+        logger.info(
+            "Uploaded local media to tmper: path=%s public_url=%s",
+            local_path,
+            VideoEmbeddingService._truncate_for_log(public_url),
+        )
 
         VideoEmbeddingService._set_cached_public_url(value, public_url)
         return public_url
@@ -172,13 +196,32 @@ class VideoEmbeddingService:
                 "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
                 "Content-Type": "application/json",
             }
+            logger.info(
+                "Requesting DashScope embedding: video_id=%s model=%s text_length=%s content_count=%s has_cover=%s has_video=%s cover_url=%s video_url=%s",
+                video_id,
+                settings.DASHSCOPE_MULTIMODAL_MODEL,
+                len(text_content),
+                len(contents),
+                bool(public_cover_url),
+                bool(public_video_url),
+                VideoEmbeddingService._truncate_for_log(public_cover_url),
+                VideoEmbeddingService._truncate_for_log(public_video_url),
+            )
 
             response = requests.post(
                 settings.DASHSCOPE_EMBEDDING_URL,
                 json=payload,
                 headers=headers,
-                timeout=120,
+                timeout=240,
             )
+            if not response.ok:
+                logger.error(
+                    "DashScope embedding request failed: video_id=%s model=%s status=%s response=%s",
+                    video_id,
+                    settings.DASHSCOPE_MULTIMODAL_MODEL,
+                    response.status_code,
+                    VideoEmbeddingService._truncate_for_log(response.text, max_length=4000),
+                )
             response.raise_for_status()
             response_data = response.json()
 
@@ -204,8 +247,15 @@ class VideoEmbeddingService:
             logger.info(f"Generated embedding via DashScope for video {video_id}")
             return embedding
 
+        except requests.HTTPError:
+            logger.error(
+                "HTTP error while generating embedding for video %s",
+                video_id,
+                exc_info=True,
+            )
+            raise
         except Exception as e:
-            logger.error(f"Error generating video embedding: {e}")
+            logger.error(f"Error generating video embedding for video {video_id}: {e}", exc_info=True)
             raise
 
     @staticmethod

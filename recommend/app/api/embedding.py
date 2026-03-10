@@ -67,7 +67,7 @@ async def insert_video_embedding(request: InsertVideoEmbeddingRequest):
     插入视频向量到 Milvus
 
     - **video_id**: 视频ID
-    - **embedding**: 视频向量 (128维)
+    - **embedding**: 视频向量 (1024维)
     - **author_id**: 作者ID
     - **created_ts**: 创建时间戳（毫秒，可选）
     """

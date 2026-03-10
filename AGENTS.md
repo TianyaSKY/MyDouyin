@@ -85,7 +85,7 @@
 - 若修改 recommend 接口入参/出参，必须同步检查并更新：
   - `backend/src/main/java/com/douyin/client/RecommendServiceClient.java`
 - 当前视频 embedding 关键入参：`video_id/title/tags/cover_url/video_url`。
-- 向量维度约束为 128，已在 Pydantic schema 层限制；修改维度需同步：
+- 向量维度约束为 1024，已在 Pydantic schema 层限制；修改维度需同步：
   - recommend schema
   - backend 消费与校验逻辑
   - Milvus collection 定义与写入逻辑

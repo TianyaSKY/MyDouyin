@@ -22,7 +22,7 @@ public class MilvusServiceImpl implements IMilvusService {
     private final MilvusServiceClient milvusClient;
     private static final String COLLECTION_NAME = "video_embedding";
     private static final String VECTOR_FIELD = "embedding";
-    private static final Integer VECTOR_DIM = 128;
+    private static final Integer VECTOR_DIM = 1024;
 
     @Override
     public List<Long> searchSimilarVideos(List<Float> userVector, int topK) {

@@ -35,7 +35,7 @@ async def update_user_long_term_vector(request: UpdateUserLongTermVectorRequest)
     更新用户长期向量（到 Milvus）
 
     - **user_id**: 用户ID
-    - **vector**: 长期向量 (128维)
+    - **vector**: 长期向量 (1024维)
     """
     user_id = request.user_id
     vector = request.vector
@@ -52,8 +52,8 @@ async def insert_user_vector(request: InsertUserVectorRequest):
     插入用户向量（到 Milvus）
 
     - **user_id**: 用户ID
-    - **long_term_vec**: 长期向量 (128维)
-    - **interest_vec**: 初始兴趣向量 (128维)
+    - **long_term_vec**: 长期向量 (1024维)
+    - **interest_vec**: 初始兴趣向量 (1024维)
     """
     user_id = request.user_id
     long_term_vec = request.long_term_vec

@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class VideoEmbeddingConsumer {
 
     private static final String VIDEO_EMBED_DONE_KEY_PREFIX = "video:embedding:done:";
-    private static final int VECTOR_DIM = 128;
+    private static final int VECTOR_DIM = 1024;
 
     private final RecommendServiceClient recommendServiceClient;
     private final VideoService videoService;
