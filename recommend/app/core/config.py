@@ -1,6 +1,7 @@
 """
 配置管理
 """
+
 from pathlib import Path
 from typing import Optional
 
@@ -54,8 +55,12 @@ class Settings(BaseSettings):
     BATCH_SIZE: int = 32
     USE_GPU: bool = True
 
-    # 文件上传配置
-    TMPER_UPLOAD_URL: str = "https://tmper.app/upload/"
+    # 七牛云上传配置
+    QINIU_ACCESS_KEY: str = ""
+    QINIU_SECRET_KEY: str = ""
+    QINIU_BUCKET_NAME: str = ""
+    QINIU_PUBLIC_BASE_URL: str = ""
+    QINIU_KEY_PREFIX: str = "douyin"
 
     # DashScope 多模态向量配置
     DASHSCOPE_API_KEY: str = ""
@@ -65,5 +70,6 @@ class Settings(BaseSettings):
     @property
     def PORT(self) -> int:
         return self.RECOMMEND_PORT
+
 
 settings = Settings()

@@ -3,7 +3,7 @@ from .video_service import video_embedding_service
 from .user_service import user_embedding_service
 from .ranking_service import ranking_service
 from .milvus_service import milvus_service
-from .tmper_upload_service import tmper_upload_service
+from .tmper_upload_service import qiniu_upload_service, tmper_upload_service
 
 __all__ = [
     "model_manager",
@@ -11,6 +11,6 @@ __all__ = [
     "user_embedding_service",
     "ranking_service",
     "milvus_service",
+    "qiniu_upload_service",
     "tmper_upload_service",
 ]
-

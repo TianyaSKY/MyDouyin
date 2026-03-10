@@ -1,17 +1,19 @@
 """
 视频向量生成服务
 """
+
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlsplit
 
 import redis
 import requests
 
 from app.core.config import settings
-from app.services.tmper_upload_service import tmper_upload_service
+from app.services.tmper_upload_service import qiniu_upload_service
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +58,11 @@ class VideoEmbeddingService:
     def _get_cached_public_url(cls, local_ref: str) -> Optional[str]:
         value = cls._get_redis_client().get(cls._cache_key(local_ref))
         if isinstance(value, str) and value:
+            normalized_value = cls._normalize_public_url(value)
+            if normalized_value != value:
+                cls._set_cached_public_url(local_ref, normalized_value)
             logger.info("Using cached public media URL for local_ref=%s", local_ref)
-            return value
+            return normalized_value
         return None
 
     @classmethod
@@ -78,13 +83,35 @@ class VideoEmbeddingService:
 
         if raw.startswith("/uploads/"):
             # 约定：/uploads/** 对应项目根目录 storage/**
-            local_path = VideoEmbeddingService._project_root() / "storage" / raw[len("/uploads/"):]
+            local_path = (
+                VideoEmbeddingService._project_root()
+                / "storage"
+                / raw[len("/uploads/") :]
+            )
             return local_path if local_path.exists() else None
 
         path_obj = Path(raw)
         if path_obj.is_absolute():
             return path_obj if path_obj.exists() else None
         return None
+
+    @staticmethod
+    def _normalize_public_url(url: str) -> str:
+        value = url.strip()
+        if not value:
+            raise ValueError("Public media URL cannot be empty")
+
+        parsed = urlsplit(value)
+        if parsed.scheme:
+            return value
+
+        normalized = f"https://{value.lstrip('/')}"
+        logger.info(
+            "Normalized public media URL without scheme: original=%s normalized=%s",
+            VideoEmbeddingService._truncate_for_log(value),
+            VideoEmbeddingService._truncate_for_log(normalized),
+        )
+        return normalized
 
     @staticmethod
     def _to_public_url(url_or_path: Optional[str]) -> Optional[str]:
@@ -94,11 +121,19 @@ class VideoEmbeddingService:
         if not value:
             return None
         if value.startswith("http://") or value.startswith("https://"):
+            value = VideoEmbeddingService._normalize_public_url(value)
             logger.info(
                 "Media is already a public URL: %s",
                 VideoEmbeddingService._truncate_for_log(value),
             )
             return value
+
+        if (
+            "/" in value
+            and not Path(value).is_absolute()
+            and not value.startswith("/uploads/")
+        ):
+            return VideoEmbeddingService._normalize_public_url(value)
 
         cached_url = VideoEmbeddingService._get_cached_public_url(value)
         if cached_url:
@@ -110,37 +145,18 @@ class VideoEmbeddingService:
         if not local_path.is_file():
             raise ValueError(f"Local media path is not a file: {value}")
 
-        content = local_path.read_bytes()
-        if not content:
-            raise ValueError(f"Local media file is empty: {value}")
-
-        suffix = local_path.suffix.lower()
-        content_type_map = {
-            ".mp4": "video/mp4",
-            ".mov": "video/quicktime",
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".png": "image/png",
-            ".webp": "image/webp",
-        }
-        content_type = content_type_map.get(suffix, "application/octet-stream")
         logger.info(
-            "Uploading local media to tmper: path=%s size_bytes=%s content_type=%s",
+            "Uploading local media to qiniu: path=%s size_bytes=%s",
             local_path,
             local_path.stat().st_size,
-            content_type,
         )
-        upload_result = tmper_upload_service.upload_file(
-            filename=local_path.name,
-            content=content,
-            content_type=content_type,
-        )
+        upload_result = qiniu_upload_service.upload_local_file(local_path)
         public_url = upload_result.get("url")
         if not public_url:
-            raise ValueError("tmper upload success but no url in response")
-        public_url = str(public_url)
+            raise ValueError("qiniu upload success but no url in response")
+        public_url = VideoEmbeddingService._normalize_public_url(str(public_url))
         logger.info(
-            "Uploaded local media to tmper: path=%s public_url=%s",
+            "Uploaded local media to qiniu: path=%s public_url=%s",
             local_path,
             VideoEmbeddingService._truncate_for_log(public_url),
         )
@@ -175,12 +191,18 @@ class VideoEmbeddingService:
 
             text_parts = [title.strip()]
             if tags:
-                text_parts.append(" ".join(tag.strip() for tag in tags if tag and tag.strip()))
+                text_parts.append(
+                    " ".join(tag.strip() for tag in tags if tag and tag.strip())
+                )
             text_content = " ".join(part for part in text_parts if part)
 
             contents: List[Dict[str, Any]] = [{"text": text_content}]
-            public_cover_url = VideoEmbeddingService._to_public_url(cover_url) if cover_url else None
-            public_video_url = VideoEmbeddingService._to_public_url(video_url) if video_url else None
+            public_cover_url = (
+                VideoEmbeddingService._to_public_url(cover_url) if cover_url else None
+            )
+            public_video_url = (
+                VideoEmbeddingService._to_public_url(video_url) if video_url else None
+            )
             if public_cover_url:
                 contents.append({"image": public_cover_url})
             if public_video_url:
@@ -220,7 +242,9 @@ class VideoEmbeddingService:
                     video_id,
                     settings.DASHSCOPE_MULTIMODAL_MODEL,
                     response.status_code,
-                    VideoEmbeddingService._truncate_for_log(response.text, max_length=4000),
+                    VideoEmbeddingService._truncate_for_log(
+                        response.text, max_length=4000
+                    ),
                 )
             response.raise_for_status()
             response_data = response.json()
@@ -255,7 +279,10 @@ class VideoEmbeddingService:
             )
             raise
         except Exception as e:
-            logger.error(f"Error generating video embedding for video {video_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error generating video embedding for video {video_id}: {e}",
+                exc_info=True,
+            )
             raise
 
     @staticmethod
@@ -264,7 +291,9 @@ class VideoEmbeddingService:
         max_workers = min(8, max(1, len(tasks)))
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_video_id = {
-                executor.submit(VideoEmbeddingService.generate_embedding, **payload): video_id
+                executor.submit(
+                    VideoEmbeddingService.generate_embedding, **payload
+                ): video_id
                 for video_id, payload in tasks.items()
             }
             for future in as_completed(future_to_video_id):
@@ -293,7 +322,9 @@ class VideoEmbeddingService:
                     for item in video_items
                 }
                 embeddings = VideoEmbeddingService._run_batch(tasks)
-                logger.info(f"Generated batch embeddings via DashScope for {len(tasks)} videos")
+                logger.info(
+                    f"Generated batch embeddings via DashScope for {len(tasks)} videos"
+                )
                 return embeddings
 
             if video_ids:
@@ -306,7 +337,9 @@ class VideoEmbeddingService:
                     for video_id in video_ids
                 }
                 embeddings = VideoEmbeddingService._run_batch(tasks)
-                logger.info(f"Generated batch embeddings via DashScope for {len(tasks)} videos")
+                logger.info(
+                    f"Generated batch embeddings via DashScope for {len(tasks)} videos"
+                )
                 return embeddings
 
             raise ValueError("videos or video_ids must be provided")

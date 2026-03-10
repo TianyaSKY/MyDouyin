@@ -12,7 +12,7 @@
   - 通过 RabbitMQ 异步触发视频 embedding
 - `recommend/`（FastAPI, 默认端口 `18101`）
   - 视频 embedding 生成（DashScope 多模态）
-  - 本地媒体路径转公网 URL（tmper 上传）
+  - 本地媒体路径转公网 URL（七牛云上传）
   - embedding 写入 Milvus
   - 用户向量计算、向量召回、精排
 - `frontend/`（React + Vite）
@@ -70,7 +70,7 @@
 - DashScope 多模态 embedding 需要公网可访问 URL。
 - recommend 在 `VideoEmbeddingService` 内对 `cover_url/video_url` 做转换：
   - 若已是 `http(s)`，直接使用。
-  - 若是本地路径（如 `/uploads/...`），先上传到 `https://tmper.app/upload/` 获取公网 URL。
+  - 若是本地路径（如 `/uploads/...`），先上传到七牛云并生成可访问公网 URL。
 - 转换结果使用 Redis 缓存 30 分钟（key 前缀：`recommend:upload:url:`）。
 
 ### 3.3 点赞幂等与统计
@@ -113,7 +113,7 @@
   - `DASHSCOPE_API_KEY=...`
   - `DASHSCOPE_EMBEDDING_URL=...`
   - `DASHSCOPE_MULTIMODAL_MODEL=tongyi-embedding-vision-plus`
-  - `TMPER_UPLOAD_URL=https://tmper.app/upload/`
+  - `QINIU_ACCESS_KEY/QINIU_SECRET_KEY/QINIU_BUCKET_NAME/QINIU_PUBLIC_BASE_URL`
   - `REDIS_HOST/REDIS_PORT/REDIS_DB/REDIS_PASSWORD`
 - 严禁提交任何密钥、令牌、密码到仓库。
 
