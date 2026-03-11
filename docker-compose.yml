@@ -100,6 +100,18 @@
       - "minio-milvus"
     networks:
       - douyin-net
+  attu:
+    container_name: milvus-attu
+    image: zilliz/attu:latest
+    restart: always
+    ports:
+      - "8000:3000"
+    environment:
+      MILVUS_URL: milvus:19530
+    depends_on:
+      - milvus
+    networks:
+      - douyin-net
 
 volumes:
   mysql_data:

@@ -48,6 +48,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
         // Create user
         UserProfile user = new UserProfile();
+        user.setIs_admin(0);  // 默认策略无法通过注册来成为管理员 如果有需要手动修改
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setNickname(request.getNickname() != null ? request.getNickname() : request.getUsername());

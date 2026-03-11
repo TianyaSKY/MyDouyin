@@ -95,7 +95,8 @@ VIDEO_URL_PREFIX = "/uploads/videos/"
 COVER_URL_PREFIX = "/uploads/covers/"
 
 EMBEDDING_DIM = 1024
-DEFAULT_RECOMMEND_URL = os.getenv("RECOMMEND_SERVICE_URL", "http://localhost:18101")
+DEFAULT_RECOMMEND_URL = os.getenv(
+    "RECOMMEND_SERVICE_URL", "http://localhost:18101")
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".flv", ".avi", ".mov", ".webm"}
 COVER_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -197,7 +198,8 @@ def insert_video(cursor, author_id: int, title: str, tags: list, cover_url: str,
         INSERT INTO videos (author_id, title, tags, status, cover_url, video_url)
         VALUES (%s, %s, %s, %s, %s, %s)
     """
-    cursor.execute(sql, (author_id, title, json.dumps(tags, ensure_ascii=False), status, cover_url, video_url))
+    cursor.execute(sql, (author_id, title, json.dumps(
+        tags, ensure_ascii=False), status, cover_url, video_url))
     return cursor.lastrowid
 
 
@@ -227,7 +229,8 @@ def generate_video_embedding(
     data = response.json()
     embedding = data.get("embedding")
     if not isinstance(embedding, list) or len(embedding) != EMBEDDING_DIM:
-        raise ValueError(f"embedding 维度异常: {0 if embedding is None else len(embedding)}")
+        raise ValueError(
+            f"embedding 维度异常: {0 if embedding is None else len(embedding)}")
     return [float(item) for item in embedding]
 
 
@@ -262,17 +265,28 @@ def insert_video_embedding(
 def main():
     parser = argparse.ArgumentParser(description="本地视频批量入库脚本（含 embedding 入库）")
     parser.add_argument("--source", "-s", required=True, help="视频文件所在目录")
-    parser.add_argument("--author-id", "-a", type=int, default=1, help="作者用户ID (默认: 1)")
-    parser.add_argument("--status", type=int, default=1, choices=[0, 1, 2], help="视频状态: 0=审核中, 1=已发布, 2=已删除 (默认: 1)")
-    parser.add_argument("--storage", default=None, help="storage 根目录 (默认: 项目下的 storage/)")
-    parser.add_argument("--recursive", action="store_true", help="递归扫描 source 目录下的所有视频")
-    parser.add_argument("--recommend-url", default=DEFAULT_RECOMMEND_URL, help="recommend 服务地址")
-    parser.add_argument("--request-timeout", type=int, default=180, help="recommend 请求超时（秒）")
-    parser.add_argument("--db-host", default=DEFAULT_DB_CONFIG["host"], help="MySQL 主机")
-    parser.add_argument("--db-port", type=int, default=DEFAULT_DB_CONFIG["port"], help="MySQL 端口")
-    parser.add_argument("--db-user", default=DEFAULT_DB_CONFIG["user"], help="MySQL 用户名")
-    parser.add_argument("--db-password", default=DEFAULT_DB_CONFIG["password"], help="MySQL 密码")
-    parser.add_argument("--db-name", default=DEFAULT_DB_CONFIG["database"], help="数据库名")
+    parser.add_argument("--author-id", "-a", type=int,
+                        default=2, help="作者用户ID (默认: 2)")
+    parser.add_argument("--status", type=int, default=1,
+                        choices=[0, 1, 2], help="视频状态: 0=审核中, 1=已发布, 2=已删除 (默认: 1)")
+    parser.add_argument("--storage", default=None,
+                        help="storage 根目录 (默认: 项目下的 storage/)")
+    parser.add_argument("--recursive", action="store_true",
+                        help="递归扫描 source 目录下的所有视频")
+    parser.add_argument("--recommend-url",
+                        default=DEFAULT_RECOMMEND_URL, help="recommend 服务地址")
+    parser.add_argument("--request-timeout", type=int,
+                        default=180, help="recommend 请求超时（秒）")
+    parser.add_argument(
+        "--db-host", default=DEFAULT_DB_CONFIG["host"], help="MySQL 主机")
+    parser.add_argument("--db-port", type=int,
+                        default=DEFAULT_DB_CONFIG["port"], help="MySQL 端口")
+    parser.add_argument(
+        "--db-user", default=DEFAULT_DB_CONFIG["user"], help="MySQL 用户名")
+    parser.add_argument(
+        "--db-password", default=DEFAULT_DB_CONFIG["password"], help="MySQL 密码")
+    parser.add_argument(
+        "--db-name", default=DEFAULT_DB_CONFIG["database"], help="数据库名")
     parser.add_argument("--dry-run", action="store_true", help="仅预览，不实际执行")
     args = parser.parse_args()
 
@@ -295,9 +309,11 @@ def main():
     cover_dest.mkdir(parents=True, exist_ok=True)
 
     # 扫描视频文件
-    scan_iter = source_dir.rglob("*") if args.recursive else source_dir.iterdir()
+    scan_iter = source_dir.rglob(
+        "*") if args.recursive else source_dir.iterdir()
     video_files = sorted(
-        [f for f in scan_iter if f.is_file() and f.suffix.lower() in VIDEO_EXTENSIONS],
+        [f for f in scan_iter if f.is_file() and f.suffix.lower()
+         in VIDEO_EXTENSIONS],
         key=lambda p: str(p.relative_to(source_dir)).lower(),
     )
 
@@ -330,7 +346,8 @@ def main():
         return
 
     # 确认
-    confirm = input(f"即将导入 {len(import_list)} 个视频到数据库，作者ID={args.author_id}。继续？(y/N): ")
+    confirm = input(
+        f"即将导入 {len(import_list)} 个视频到数据库，作者ID={args.author_id}。继续？(y/N): ")
     if confirm.lower() not in ("y", "yes"):
         print("已取消")
         return
@@ -367,12 +384,14 @@ def main():
             cover_url = ""
             if cf:
                 cover_hash = md5_file(str(cf))
-                cover_final_name = copy_file_with_hash(cf, cover_dest, cover_hash)
+                cover_final_name = copy_file_with_hash(
+                    cf, cover_dest, cover_hash)
                 cover_url = COVER_URL_PREFIX + cover_final_name
 
             # 3. 写入 media_files 表
             video_size = vf.stat().st_size
-            insert_media_file(cursor, video_hash, video_size, vf.name, video_url)
+            insert_media_file(cursor, video_hash,
+                              video_size, vf.name, video_url)
 
             # 4. 写入 videos 表
             video_id = insert_video(

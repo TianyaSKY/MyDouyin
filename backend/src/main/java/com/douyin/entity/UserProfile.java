@@ -29,14 +29,11 @@ public class UserProfile {
     @JsonIgnore
     private String password;
 
+    private Integer is_admin;
+
     private String nickname;
 
     private String avatarUrl;
-
-    /**
-     * 用户向量已迁移到 Milvus，不再存储在 MySQL
-     * 使用 RecommendServiceClient 调用 FastAPI 获取用户向量
-     */
 
     private LocalDateTime createdAt;
 

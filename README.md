@@ -96,7 +96,7 @@ npm run dev
 ## 项目结构
 
 - `frontend/`: 基于 React 的 Web 前端应用。
-- **backend/**: 核心业务逻辑与 API 网关 (Spring Boot)。
+- `backend/`: 核心业务逻辑与 API 网关 (Spring Boot)。
 - `recommend/`: 推荐算法与向量服务 (FastAPI)。
 - `docker-compose.yml`: 基础设施编排文件。
 - `scripts/`: 实用脚本工具。

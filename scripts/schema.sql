@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(64) NOT NULL UNIQUE COMMENT '用户名',
     password VARCHAR(255) NOT NULL COMMENT '加密后的密码',
     nickname VARCHAR(64) NULL COMMENT '昵称',
+    is_admin TINYINT(1) NOT NULL COMMENT '是否为管理员',
     avatar_url VARCHAR(512) NULL COMMENT '头像URL',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
@@ -80,3 +81,11 @@ CREATE TABLE IF NOT EXISTS media_files (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     UNIQUE KEY uk_file_hash (file_hash)
 ) COMMENT '媒体文件登记表(用于秒传)';
+
+-- 插入数据
+-- 插入管理员用户 密码在此项目的默认密钥hash 登录使用admin123
+
+INSERT INTO Users(user_id,username,password,nickname,is_admin)
+VALUES
+(1,'default_admin','$2a$10$NWTWuFxkkuKkuSDADiuCDeBsr0NKol9XCMjwsD8rNatW3y09hPcnG','默认管理员',1),
+(2,'default_user','$2a$10$NWTWuFxkkuKkuSDADiuCDeBsr0NKol9XCMjwsD8rNatW3y09hPcnG','默认用户',0),
