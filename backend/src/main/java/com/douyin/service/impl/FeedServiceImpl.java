@@ -110,14 +110,14 @@ public class FeedServiceImpl implements IFeedService {
     private List<RecallCandidate> recallWithAttempts(Long userId, int requestSize, Set<Long> seenVideoIds) {
         Map<Long, RecallCandidate> uniqueMap = new LinkedHashMap<>();
 
-        for (int attempt = 0; attempt < MAX_RECALL_ATTEMPTS; attempt++) {
-            int recallSize = requestSize * RECALL_MULTIPLIER * (attempt + 1);
+        for (int attempt = 1; attempt <= MAX_RECALL_ATTEMPTS; attempt++) {
+            int recallSize = requestSize * RECALL_MULTIPLIER * attempt;
             recallSize = Math.min(recallSize, MAX_RECALL_SIZE);
 
             List<RecallCandidate> attemptCandidates = multiRecall(userId, recallSize, seenVideoIds);
             mergeCandidates(uniqueMap, attemptCandidates);
 
-            log.info("Recall attempt {} finished, merged candidates: {}", attempt + 1, uniqueMap.size());
+            log.info("Recall attempt {} finished, merged candidates: {}", attempt, uniqueMap.size());
             if (uniqueMap.size() >= requestSize) {
                 break;
             }
@@ -137,6 +137,9 @@ public class FeedServiceImpl implements IFeedService {
         return new ArrayList<>(uniqueMap.values());
     }
 
+    /**
+     *合并召回结果
+     */
     private void mergeCandidates(Map<Long, RecallCandidate> uniqueMap, List<RecallCandidate> candidates) {
         if (candidates == null || candidates.isEmpty()) {
             return;
