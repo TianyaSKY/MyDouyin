@@ -40,7 +40,7 @@ class MilvusService:
     @staticmethod
     def _delete_by_field(collection: Collection, field_name: str, field_value: int) -> int:
         """
-        按业务字段删除记录（兼容仅支持按主键 delete 的 Milvus 版本）。
+        按业务字段删除记录
 
         逻辑：
         1) 先 query 出匹配记录的主键值；

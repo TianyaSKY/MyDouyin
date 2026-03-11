@@ -30,8 +30,6 @@ public class UserEventConsumer {
 
         try {
             // 1. Save raw event log
-            // Note: In high QPS scenarios, we might batch insert or use ClickHouse.
-            // For MVP, MySQL single insert is acceptable.
             userEventService.save(event);
 
             // 2. Aggregate stats

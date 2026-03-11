@@ -60,11 +60,10 @@ public class MilvusServiceImpl implements IMilvusService {
             }
 
             // 提取 video_id
-            results.getResults().getFieldsDataList().get(0)
-                .getScalars()
-                .getLongData()
-                .getDataList()
-                .forEach(videoIds::add);
+            videoIds.addAll(results.getResults().getFieldsDataList().get(0)
+                    .getScalars()
+                    .getLongData()
+                    .getDataList());
 
             log.info("Milvus recalled {} videos for user vector", videoIds.size());
             return videoIds;

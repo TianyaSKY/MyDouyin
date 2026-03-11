@@ -33,23 +33,37 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FeedServiceImpl implements IFeedService {
 
+    // 负责视频数据查询，以及兜底时从数据库补召回结果。
     private final VideoService videoService;
+    // 提供视频互动统计数据，用于计算热度分。
     private final VideoStatsDailyService videoStatsDailyService;
+    // 调用 Milvus 做向量相似度检索。
     private final IMilvusService milvusService;
+    // 生成用户兴趣向量，用于个性化召回。
     private final UserEmbeddingService userEmbeddingService;
+    // 读写 Redis 中的热门池和用户已看历史等数据。
     private final RedisTemplate<String, Object> redisTemplate;
+    // 将曝光事件发送到 RabbitMQ。
     private final RabbitTemplate rabbitTemplate;
 
     // Thread pool for parallel recall
     private final ExecutorService recallExecutor = Executors.newFixedThreadPool(10);
 
+    // Redis ZSET：全局热门视频池 key。
     private static final String HOT_VIDEO_KEY = "video:hot";
+    // Redis Set：用户已看视频集合 key 前缀。
     private static final String USER_SEEN_KEY_PREFIX = "user:seen:";
-    private static final int RECALL_MULTIPLIER = 3; // 召回候选数是返回数的3倍
+    // 候选召回放大倍数，避免过滤和排序后结果不足。
+    private static final int RECALL_MULTIPLIER = 3;
+    // 热门池召回时的放大倍数，用于抵消已看过滤造成的损耗。
     private static final int HOT_POOL_EXPAND = 5;
+    // 向量召回时的放大倍数，用于抵消已看过滤造成的损耗。
     private static final int VECTOR_POOL_EXPAND = 3;
+    // 最大召回轮数，每轮会逐步扩大召回窗口。
     private static final int MAX_RECALL_ATTEMPTS = 3;
+    // 单轮召回候选数量上限，避免一次查太多。
     private static final int MAX_RECALL_SIZE = 300;
+    // 数据库兜底查询时，排除 ID 列表的最大数量。
     private static final int MAX_EXCLUDE_SIZE = 1000;
 
     @Override
@@ -253,7 +267,7 @@ public class FeedServiceImpl implements IFeedService {
                     return !seenVideoIds.contains(videoId);
                 })
                 .limit(size)
-                .collect(Collectors.toList());
+                .toList();
 
             if (filtered.isEmpty()) {
                 return fallbackRecallFromDB(size, seenVideoIds);

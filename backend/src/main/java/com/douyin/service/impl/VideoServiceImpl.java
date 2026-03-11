@@ -5,9 +5,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.douyin.entity.Video;
+import com.douyin.entity.VideoStatsDaily;
 import com.douyin.entity.enums.VideoStatus;
 import com.douyin.mapper.VideoMapper;
 import com.douyin.service.VideoService;
+import com.douyin.service.VideoStatsDailyService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -19,7 +21,7 @@ import java.io.Serializable;
 public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video>
         implements VideoService {
 
-    private final com.douyin.service.VideoStatsDailyService videoStatsDailyService;
+    private final VideoStatsDailyService videoStatsDailyService;
 
     @Override
     @Cacheable(cacheNames = "videoDetail", key = "#id", condition = "#id != null")
@@ -63,7 +65,7 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video>
     private void populateStats(IPage<Video> page) {
         if (page.getRecords() != null) {
             for (Video video : page.getRecords()) {
-                com.douyin.entity.VideoStatsDaily stats = videoStatsDailyService.getTotalStatsByVideo(video.getId());
+                VideoStatsDaily stats = videoStatsDailyService.getTotalStatsByVideo(video.getId());
                 if (stats != null) {
                     video.setLikeCount(stats.getLikeCnt());
                     video.setViewCount(stats.getImprCnt());
