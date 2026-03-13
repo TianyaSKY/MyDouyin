@@ -85,6 +85,7 @@
 - 若修改 recommend 接口入参/出参，必须同步检查并更新：
   - `backend/src/main/java/com/douyin/client/RecommendServiceClient.java`
 - 当前视频 embedding 关键入参：`video_id/title/tags/cover_url/video_url`。
+- 当前 backend 还会调用 recommend 的已存储视频向量查询接口，用于按标签聚合初始兴趣向量。
 - 向量维度约束为 1024，已在 Pydantic schema 层限制；修改维度需同步：
   - recommend schema
   - backend 消费与校验逻辑

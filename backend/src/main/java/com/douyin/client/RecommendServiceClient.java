@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -100,6 +101,37 @@ public class RecommendServiceClient {
             
         } catch (Exception e) {
             log.error("Error calling recommend service for batch video embeddings", e);
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * 获取已存储的视频向量
+     */
+    public Map<Long, List<Float>> getStoredVideoEmbeddings(List<Long> videoIds) {
+        try {
+            String url = recommendServiceUrl + "/api/embedding/video/query";
+
+            Map<String, Object> request = new HashMap<>();
+            request.put("video_ids", videoIds);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<BatchVideoEmbeddingResponse> response = restTemplate.postForEntity(
+                url, entity, BatchVideoEmbeddingResponse.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                return response.getBody().getEmbeddings();
+            }
+
+            log.warn("Failed to query stored video embeddings");
+            return new HashMap<>();
+
+        } catch (Exception e) {
+            log.error("Error querying stored video embeddings", e);
             return new HashMap<>();
         }
     }
@@ -232,6 +264,34 @@ public class RecommendServiceClient {
             
         } catch (Exception e) {
             log.error("Error getting long-term vector for user {}", userId, e);
+            return null;
+        }
+    }
+
+    /**
+     * 获取用户初始兴趣向量（从 Milvus）
+     */
+    public List<Float> getUserInterestVector(Long userId) {
+        try {
+            String url = recommendServiceUrl + "/api/user/vector/interest/" + userId;
+
+            ResponseEntity<UserVectorResponse> response = restTemplate.getForEntity(
+                url, UserVectorResponse.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                log.info("Retrieved interest vector for user {}", userId);
+                return response.getBody().getVector();
+            }
+
+            log.debug("Interest vector not found for user {}", userId);
+            return null;
+
+        } catch (HttpClientErrorException.NotFound e) {
+            log.warn("Interest vector endpoint not available or user {} has no interest vector", userId);
+            return null;
+        } catch (Exception e) {
+            log.error("Error getting interest vector for user {}", userId, e);
             return null;
         }
     }

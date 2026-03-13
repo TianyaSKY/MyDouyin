@@ -23,6 +23,8 @@ export default {
       animation: {
         'float-pulse': 'floatPulse 10s ease-in-out infinite',
         'glow': 'glow 2s ease-in-out infinite alternate',
+        'modal-pop': 'modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+        'backdrop-fade': 'backdropFade 0.3s ease-out forwards',
       },
       keyframes: {
         floatPulse: {
@@ -33,6 +35,15 @@ export default {
         glow: {
           'from': { boxShadow: '0 0 20px rgba(225, 29, 72, 0.3)' },
           'to': { boxShadow: '0 0 40px rgba(225, 29, 72, 0.6)' },
+        },
+        modalPop: {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '50%': { transform: 'scale(1.02)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        backdropFade: {
+          '0%': { opacity: '0', backdropFilter: 'blur(0px)' },
+          '100%': { opacity: '1', backdropFilter: 'blur(8px)' },
         },
       },
     },

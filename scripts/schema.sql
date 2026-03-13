@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS videos (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '视频ID',
     author_id BIGINT NOT NULL COMMENT '作者ID',
     title VARCHAR(255) NOT NULL COMMENT '视频标题',
-    tags JSON NULL COMMENT '视频标签',
     status TINYINT NOT NULL DEFAULT 0 COMMENT '状态(0:审核中, 1:已发布, 2:已删除)',
     cover_url VARCHAR(512) NULL COMMENT '封面图URL',
     video_url VARCHAR(512) NOT NULL COMMENT '视频文件URL',
@@ -29,7 +28,19 @@ CREATE TABLE IF NOT EXISTS videos (
     INDEX idx_created_at (created_at)
 ) COMMENT '视频元数据表';
 
--- 3. Video Daily Stats (Aggregated counters)
+-- 3. Video Tags
+CREATE TABLE IF NOT EXISTS video_tags (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    video_id BIGINT NOT NULL COMMENT '视频ID',
+    tag_name VARCHAR(64) NOT NULL COMMENT '标签名',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '标签顺序',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    UNIQUE KEY uk_video_tag (video_id, tag_name),
+    INDEX idx_video_id (video_id),
+    INDEX idx_tag_name (tag_name)
+) COMMENT '视频标签表';
+
+-- 4. Video Daily Stats (Aggregated counters)
 -- In production, this might be written from Redis to DB periodically
 CREATE TABLE IF NOT EXISTS video_daily_stats (
     video_id BIGINT NOT NULL COMMENT '视频ID',
@@ -43,7 +54,7 @@ CREATE TABLE IF NOT EXISTS video_daily_stats (
     PRIMARY KEY (video_id, date)
 ) COMMENT '视频每日统计表';
 
--- 4. User Events (Raw interaction logs for training)
+-- 5. User Events (Raw interaction logs for training)
 CREATE TABLE IF NOT EXISTS user_events (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
@@ -56,7 +67,7 @@ CREATE TABLE IF NOT EXISTS user_events (
     INDEX idx_ts (ts)
 ) COMMENT '用户行为日志表';
 
--- 5. User-Video Relation State (source of truth for idempotent like/favorite actions)
+-- 6. User-Video Relation State (source of truth for idempotent like/favorite actions)
 CREATE TABLE IF NOT EXISTS user_video_relations (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
@@ -71,7 +82,7 @@ CREATE TABLE IF NOT EXISTS user_video_relations (
     INDEX idx_updated_at (updated_at)
 ) COMMENT '用户-视频关系状态表(幂等真相表)';
 
--- 6. Media Files (for hash instant upload)
+-- 7. Media Files (for hash instant upload)
 CREATE TABLE IF NOT EXISTS media_files (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     file_hash VARCHAR(64) NOT NULL COMMENT '文件哈希值(MD5/SHA-256)',

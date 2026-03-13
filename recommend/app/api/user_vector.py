@@ -1,6 +1,7 @@
 """
 User vector API 路由
 """
+
 from fastapi import APIRouter, HTTPException
 
 from app.schemas import UpdateUserLongTermVectorRequest, InsertUserVectorRequest
@@ -25,7 +26,27 @@ async def get_user_long_term_vector(user_id: int):
         "user_id": user_id,
         "vector": vectors["long_term_vec"],
         "dimension": len(vectors["long_term_vec"]),
-        "updated_at": vectors["updated_at"]
+        "updated_at": vectors["updated_at"],
+    }
+
+
+@router.get("/user/vector/interest/{user_id}")
+async def get_user_interest_vector(user_id: int):
+    """
+    获取用户初始兴趣向量（从 Milvus）
+
+    - **user_id**: 用户ID
+    """
+    vectors = milvus_service.get_user_vectors(user_id)
+
+    if vectors is None:
+        raise HTTPException(status_code=404, detail="User vector not found")
+
+    return {
+        "user_id": user_id,
+        "vector": vectors["interest_vec"],
+        "dimension": len(vectors["interest_vec"]),
+        "updated_at": vectors["updated_at"],
     }
 
 

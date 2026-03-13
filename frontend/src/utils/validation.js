@@ -36,7 +36,17 @@ export const validateNickname = (nickname) => {
   return null;
 };
 
-export const validateForm = (username, password, nickname, isRegister) => {
+export const validateTags = (tags) => {
+  if (!Array.isArray(tags)) {
+    return null;
+  }
+  if (tags.length > 10) {
+    return '最多选择10个标签';
+  }
+  return null;
+};
+
+export const validateForm = (username, password, nickname, isRegister, tags = []) => {
   const errors = {};
   
   const usernameError = validateUsername(username);
@@ -48,6 +58,11 @@ export const validateForm = (username, password, nickname, isRegister) => {
   if (isRegister && nickname) {
     const nicknameError = validateNickname(nickname);
     if (nicknameError) errors.nickname = nicknameError;
+  }
+
+  if (isRegister) {
+    const tagsError = validateTags(tags);
+    if (tagsError) errors.tags = tagsError;
   }
   
   return errors;
