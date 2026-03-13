@@ -474,19 +474,19 @@ public class FeedServiceImpl implements IFeedService {
 
     private Set<String> scanKeys(String pattern) {
         Set<String> keys = redisTemplate.execute((RedisConnection connection) -> {
-            Set<String> keys = new HashSet<>();
+            Set<String> matchedKeys = new HashSet<>();
             ScanOptions options = ScanOptions.scanOptions()
                     .match(pattern)
                     .count(1000)
                     .build();
             try (Cursor<byte[]> cursor = connection.scan(options)) {
                 while (cursor.hasNext()) {
-                    keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                    matchedKeys.add(new String(cursor.next(), StandardCharsets.UTF_8));
                 }
             } catch (Exception e) {
                 log.error("Error scanning Redis keys by pattern: {}", pattern, e);
             }
-            return keys;
+            return matchedKeys;
         });
         return keys == null ? Collections.emptySet() : keys;
     }

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -286,6 +287,9 @@ public class RecommendServiceClient {
             log.debug("Interest vector not found for user {}", userId);
             return null;
 
+        } catch (HttpClientErrorException.NotFound e) {
+            log.warn("Interest vector endpoint not available or user {} has no interest vector", userId);
+            return null;
         } catch (Exception e) {
             log.error("Error getting interest vector for user {}", userId, e);
             return null;
