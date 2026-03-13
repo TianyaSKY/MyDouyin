@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.douyin.entity.enums.VideoStatus;
 import lombok.Data;
 
@@ -15,7 +14,7 @@ import java.util.List;
  * Maps to `videos` table.
  */
 @Data
-@TableName(value = "videos", autoResultMap = true)
+@TableName("videos")
 public class Video {
 
     @TableId(type = IdType.AUTO)
@@ -25,10 +24,7 @@ public class Video {
 
     private String title;
 
-    /**
-     * List of tags (stored as JSON array in MySQL).
-     */
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(exist = false)
     private List<String> tags;
 
     private VideoStatus status;

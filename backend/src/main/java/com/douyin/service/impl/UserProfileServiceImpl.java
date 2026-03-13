@@ -52,6 +52,8 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setNickname(request.getNickname() != null ? request.getNickname() : request.getUsername());
+        // processingVectorInformation
+
         save(user);
 
         initUserVector(user.getUserId());

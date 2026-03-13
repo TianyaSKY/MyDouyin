@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class RegisterRequest {
 
@@ -17,4 +19,6 @@ public class RegisterRequest {
 
     @Size(max = 64, message = "昵称长度不能超过 64")
     private String nickname;
+
+    private List<String> tags;
 }

@@ -140,8 +140,13 @@ public class VideoController {
 
         video.setId(id);
         boolean updated = videoService.updateById(video);
-        toPublicUrls(video);
-        return updated ? Result.ok(video) : Result.fail(404, "Video not found");
+        if (!updated) {
+            return Result.fail(404, "Video not found");
+        }
+
+        Video updatedVideo = videoService.getById(id);
+        toPublicUrls(updatedVideo);
+        return Result.ok(updatedVideo);
     }
 
     /**
