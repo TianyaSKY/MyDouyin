@@ -14,9 +14,21 @@ export async function login(username, password) {
   return json.data;
 }
 
-export async function register(username, password, nickname) {
+export async function getRegisterTags() {
+  const resp = await apiFetch('/api/auth/register/tags');
+  const json = await resp.json();
+
+  if (json.code !== 200) {
+    throw new Error(json.message || '获取标签失败');
+  }
+
+  return Array.isArray(json.data) ? json.data : [];
+}
+
+export async function register(username, password, nickname, tags = []) {
   const payload = { username, password };
   if (nickname && nickname.trim()) payload.nickname = nickname.trim();
+  if (Array.isArray(tags) && tags.length > 0) payload.tags = tags;
   
   const resp = await apiFetch('/api/auth/register', null, {
     method: 'POST',

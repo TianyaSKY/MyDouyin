@@ -20,5 +20,6 @@ public class RegisterRequest {
     @Size(max = 64, message = "昵称长度不能超过 64")
     private String nickname;
 
-    private List<String> tags;
+    @Size(max = 10, message = "标签数量不能超过 10")
+    private List<@NotBlank(message = "标签不能为空") @Size(max = 20, message = "单个标签长度不能超过 20") String> tags;
 }

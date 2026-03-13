@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -37,13 +38,16 @@ class VideoServiceTest {
     @Mock
     private VideoTagMapper videoTagMapper;
 
+    @Mock
+    private RedisTemplate<String, Object> redisTemplate;
+
     private VideoServiceImpl videoService;
 
     private Video testVideo;
 
     @BeforeEach
     void setUp() {
-        videoService = new VideoServiceImpl(videoStatsDailyService, videoTagMapper);
+        videoService = new VideoServiceImpl(videoStatsDailyService, videoTagMapper, redisTemplate);
         // 手动设置 baseMapper
         ReflectionTestUtils.setField(videoService, "baseMapper", videoMapper);
         

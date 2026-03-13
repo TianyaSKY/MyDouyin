@@ -8,6 +8,7 @@ import com.douyin.entity.dto.RegisterRequest;
 import com.douyin.entity.dto.TokenResponse;
 import com.douyin.entity.UserProfile;
 import com.douyin.mapper.UserProfileMapper;
+import com.douyin.service.TagVectorCacheService;
 import com.douyin.service.security.JwtUtils;
 import com.douyin.service.UserProfileService;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final RecommendServiceClient recommendServiceClient;
+    private final TagVectorCacheService tagVectorCacheService;
 
     @Override
     public UserProfile getByUsername(String username) {
@@ -56,7 +58,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
         save(user);
 
-        initUserVector(user.getUserId());
+        initUserVector(user.getUserId(), request.getTags());
 
         // Generate token
         return buildTokenResponse(user);
@@ -88,9 +90,10 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
                 .build();
     }
 
-    private void initUserVector(Long userId) {
+    private void initUserVector(Long userId, List<String> tags) {
         List<Float> zeroVector = new ArrayList<>(Collections.nCopies(VECTOR_DIM, 0.0f));
-        boolean inserted = recommendServiceClient.insertUserVector(userId, zeroVector, zeroVector);
+        List<Float> interestVector = tagVectorCacheService.getAverageVectorByTags(tags);
+        boolean inserted = recommendServiceClient.insertUserVector(userId, zeroVector, interestVector);
         if (!inserted) {
             log.warn("Failed to initialize user vector for user {}", userId);
         }

@@ -105,6 +105,37 @@ public class RecommendServiceClient {
     }
 
     /**
+     * 获取已存储的视频向量
+     */
+    public Map<Long, List<Float>> getStoredVideoEmbeddings(List<Long> videoIds) {
+        try {
+            String url = recommendServiceUrl + "/api/embedding/video/query";
+
+            Map<String, Object> request = new HashMap<>();
+            request.put("video_ids", videoIds);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<BatchVideoEmbeddingResponse> response = restTemplate.postForEntity(
+                url, entity, BatchVideoEmbeddingResponse.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                return response.getBody().getEmbeddings();
+            }
+
+            log.warn("Failed to query stored video embeddings");
+            return new HashMap<>();
+
+        } catch (Exception e) {
+            log.error("Error querying stored video embeddings", e);
+            return new HashMap<>();
+        }
+    }
+
+    /**
      * 插入视频向量（到 Milvus）
      */
     public boolean insertVideoEmbedding(Long videoId, List<Float> embedding, Long authorId, Long createdTs) {

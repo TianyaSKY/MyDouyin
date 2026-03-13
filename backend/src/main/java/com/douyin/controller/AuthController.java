@@ -6,11 +6,14 @@ import com.douyin.entity.dto.RegisterRequest;
 import com.douyin.entity.dto.TokenResponse;
 import com.douyin.service.security.JwtUserDetails;
 import com.douyin.service.UserProfileService;
+import com.douyin.service.VideoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -18,6 +21,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserProfileService userProfileService;
+    private final VideoService videoService;
+
+    @GetMapping("/register/tags")
+    public Result<List<String>> registerTags() {
+        return Result.ok(videoService.tagsByAdminPublish());
+    }
 
     /**
      * POST /api/auth/register - Register a new user

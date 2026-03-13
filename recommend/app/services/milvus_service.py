@@ -38,7 +38,9 @@ class MilvusService:
             self.connected = False
 
     @staticmethod
-    def _delete_by_field(collection: Collection, field_name: str, field_value: int) -> int:
+    def _delete_by_field(
+        collection: Collection, field_name: str, field_value: int
+    ) -> int:
         """
         按业务字段删除记录
 
@@ -96,7 +98,10 @@ class MilvusService:
                 self._connect()
 
             # 检查向量维度
-            if len(long_term_vec) != EMBEDDING_DIM or len(interest_vec) != EMBEDDING_DIM:
+            if (
+                len(long_term_vec) != EMBEDDING_DIM
+                or len(interest_vec) != EMBEDDING_DIM
+            ):
                 logger.error(f"Invalid vector dimension for user {user_id}")
                 return False
 
@@ -149,7 +154,9 @@ class MilvusService:
                 return None
 
             result = {
-                "long_term_vec": res_long[0]["vector"] if res_long else [0.0] * EMBEDDING_DIM,
+                "long_term_vec": res_long[0]["vector"]
+                if res_long
+                else [0.0] * EMBEDDING_DIM,
                 "interest_vec": res_interest[0]["vector"]
                 if res_interest
                 else [0.0] * EMBEDDING_DIM,
@@ -316,6 +323,39 @@ class MilvusService:
         except Exception as e:
             logger.error(f"Error searching similar videos: {e}")
             return []
+
+    def get_video_embeddings(self, video_ids: List[int]) -> Dict[int, List[float]]:
+        """按视频ID查询已存储的视频向量"""
+        try:
+            if not self.connected:
+                self._connect()
+
+            if not video_ids:
+                return {}
+
+            collection = Collection("video_embedding")
+            unique_ids = list(dict.fromkeys(int(video_id) for video_id in video_ids))
+            expr = f"video_id in [{','.join(map(str, unique_ids))}]"
+            results = collection.query(
+                expr=expr,
+                output_fields=["video_id", "embedding"],
+            )
+
+            embeddings: Dict[int, List[float]] = {}
+            for item in results:
+                video_id = item.get("video_id")
+                embedding = item.get("embedding")
+                if isinstance(video_id, int) and isinstance(embedding, list):
+                    embeddings[video_id] = [float(value) for value in embedding]
+
+            logger.info(
+                "Loaded %s stored video embeddings from Milvus", len(embeddings)
+            )
+            return embeddings
+
+        except Exception as e:
+            logger.error(f"Error querying video embeddings: {e}")
+            return {}
 
     def insert_video_embedding(
         self, video_id: int, embedding: List[float], author_id: int, created_ts: int

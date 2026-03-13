@@ -7,6 +7,7 @@ import com.douyin.entity.UserProfile;
 import com.douyin.service.security.JwtAuthenticationFilter;
 import com.douyin.service.security.SecurityConfig;
 import com.douyin.service.UserProfileService;
+import com.douyin.service.VideoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;
@@ -23,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -38,6 +40,9 @@ class AuthControllerTest {
 
     @MockBean
     private UserProfileService userProfileService;
+
+    @MockBean
+    private VideoService videoService;
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -59,6 +64,7 @@ class AuthControllerTest {
         request.setUsername("newuser");
         request.setPassword("password123");
         request.setNickname("新用户");
+        request.setTags(java.util.List.of("美食", "旅行"));
 
         UserProfile user = new UserProfile();
         user.setUserId(1L);
@@ -80,6 +86,17 @@ class AuthControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(200))
             .andExpect(jsonPath("$.data.token").value("test-token"));
+    }
+
+    @Test
+    void testRegisterTagsSuccess() throws Exception {
+        when(videoService.tagsByAdminPublish()).thenReturn(java.util.List.of("美食", "旅行"));
+
+        mockMvc.perform(get("/api/auth/register/tags"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.code").value(200))
+            .andExpect(jsonPath("$.data[0]").value("美食"))
+            .andExpect(jsonPath("$.data[1]").value("旅行"));
     }
 
     @Test
@@ -132,4 +149,3 @@ class AuthControllerTest {
             .andExpect(status().isBadRequest());
     }
 }
-

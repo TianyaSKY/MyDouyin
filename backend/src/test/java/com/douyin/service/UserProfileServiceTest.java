@@ -6,6 +6,7 @@ import com.douyin.entity.dto.RegisterRequest;
 import com.douyin.entity.dto.TokenResponse;
 import com.douyin.entity.UserProfile;
 import com.douyin.mapper.UserProfileMapper;
+import com.douyin.service.TagVectorCacheService;
 import com.douyin.service.security.JwtUtils;
 import com.douyin.service.impl.UserProfileServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,13 +36,16 @@ class UserProfileServiceTest {
     @Mock
     private RecommendServiceClient recommendServiceClient;
 
+    @Mock
+    private TagVectorCacheService tagVectorCacheService;
+
     private UserProfileServiceImpl userProfileService;
 
     private UserProfile testUser;
 
     @BeforeEach
     void setUp() {
-        userProfileService = new UserProfileServiceImpl(passwordEncoder, jwtUtils, recommendServiceClient);
+        userProfileService = new UserProfileServiceImpl(passwordEncoder, jwtUtils, recommendServiceClient, tagVectorCacheService);
         // 手动设置 baseMapper
         ReflectionTestUtils.setField(userProfileService, "baseMapper", userProfileMapper);
         
@@ -58,12 +62,14 @@ class UserProfileServiceTest {
         request.setUsername("newuser");
         request.setPassword("password123");
         request.setNickname("新用户");
+        request.setTags(java.util.List.of("美食", "旅行"));
 
         when(userProfileMapper.selectOne(any(), anyBoolean())).thenReturn(null);
         when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
         when(userProfileMapper.insert(any(UserProfile.class))).thenReturn(1);
         when(jwtUtils.generateToken(any(), anyString())).thenReturn("test-token");
         when(jwtUtils.getExpiration()).thenReturn(3600000L);
+        when(tagVectorCacheService.getAverageVectorByTags(anyList())).thenReturn(new java.util.ArrayList<>(java.util.Collections.nCopies(1024, 1.0f)));
         when(recommendServiceClient.insertUserVector(anyLong(), anyList(), anyList())).thenReturn(true);
 
         TokenResponse response = userProfileService.register(request);
@@ -72,6 +78,7 @@ class UserProfileServiceTest {
         assertEquals("test-token", response.getToken());
         verify(userProfileMapper, times(1)).insert(any(UserProfile.class));
         verify(jwtUtils, times(1)).generateToken(any(), anyString());
+        verify(tagVectorCacheService, times(1)).getAverageVectorByTags(anyList());
         verify(recommendServiceClient, times(1)).insertUserVector(anyLong(), anyList(), anyList());
     }
 
@@ -89,6 +96,8 @@ class UserProfileServiceTest {
 
         assertEquals("用户名已存在", exception.getMessage());
         verify(userProfileMapper, never()).insert(any(UserProfile.class));
+        verify(tagVectorCacheService, never()).getAverageVectorByTags(anyList());
+        verify(recommendServiceClient, never()).insertUserVector(anyLong(), anyList(), anyList());
     }
 
     @Test

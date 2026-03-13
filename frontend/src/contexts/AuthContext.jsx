@@ -70,12 +70,12 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const handleRegister = useCallback(async (username, password, nickname) => {
+  const handleRegister = useCallback(async (username, password, nickname, tags) => {
     setLoading(true);
     setError('');
 
     try {
-      const data = await register(username, password, nickname);
+      const data = await register(username, password, nickname, tags);
       localStorage.setItem('douyin_token', data.token);
       if (data.user) {
         localStorage.setItem('douyin_user', JSON.stringify(data.user));

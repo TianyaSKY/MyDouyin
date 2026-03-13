@@ -4,6 +4,7 @@ from .recommend import (
     BatchVideoEmbeddingItem,
     BatchVideoEmbeddingRequest,
     BatchVideoEmbeddingResponse,
+    VideoEmbeddingQueryRequest,
     InsertVideoEmbeddingRequest,
     UserEmbeddingRequest,
     UserEmbeddingResponse,
@@ -21,6 +22,7 @@ __all__ = [
     "BatchVideoEmbeddingItem",
     "BatchVideoEmbeddingRequest",
     "BatchVideoEmbeddingResponse",
+    "VideoEmbeddingQueryRequest",
     "InsertVideoEmbeddingRequest",
     "UserEmbeddingRequest",
     "UserEmbeddingResponse",
@@ -31,4 +33,3 @@ __all__ = [
     "VectorRecallRequest",
     "HealthResponse",
 ]
-

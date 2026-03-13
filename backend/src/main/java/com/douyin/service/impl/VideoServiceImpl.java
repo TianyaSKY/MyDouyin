@@ -16,6 +16,7 @@ import com.douyin.service.VideoStatsDailyService;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,10 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video>
 
     private final VideoStatsDailyService videoStatsDailyService;
     private final VideoTagMapper videoTagMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private static final String TAG_VECTOR_CACHE_KEY = "recommend:tag:vectors";
+    private static final int VECTOR_DIM = 1024;
 
     @Override
     @Cacheable(cacheNames = "videoDetail", key = "#id", condition = "#id != null")
@@ -189,9 +194,34 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video>
 
     @Override
     public List<Float> averageVectorInfoByTags(List<String> tags) {
-        // 需要通过Http通信
+        List<String> normalizedTags = normalizeTags(tags);
+        if (normalizedTags.isEmpty()) {
+            return zeroVector();
+        }
 
-        return List.of();
+        float[] sum = new float[VECTOR_DIM];
+        int matchedCount = 0;
+        for (String tag : normalizedTags) {
+            Object cached = redisTemplate.opsForHash().get(TAG_VECTOR_CACHE_KEY, tag);
+            List<Float> vector = castVector(cached);
+            if (vector.size() != VECTOR_DIM) {
+                continue;
+            }
+            for (int i = 0; i < VECTOR_DIM; i++) {
+                sum[i] += vector.get(i);
+            }
+            matchedCount++;
+        }
+
+        if (matchedCount == 0) {
+            return zeroVector();
+        }
+
+        List<Float> average = new ArrayList<>(VECTOR_DIM);
+        for (float value : sum) {
+            average.add(value / matchedCount);
+        }
+        return average;
     }
 
 
@@ -291,6 +321,25 @@ public class VideoServiceImpl extends ServiceImpl<VideoMapper, Video>
                         Collectors.toCollection(LinkedHashSet::new),
                         ArrayList::new
                 ));
+    }
+
+    private List<Float> castVector(Object cached) {
+        if (!(cached instanceof List<?> list)) {
+            return List.of();
+        }
+
+        List<Float> vector = new ArrayList<>(list.size());
+        for (Object item : list) {
+            if (!(item instanceof Number number)) {
+                return List.of();
+            }
+            vector.add(number.floatValue());
+        }
+        return vector;
+    }
+
+    private List<Float> zeroVector() {
+        return new ArrayList<>(Collections.nCopies(VECTOR_DIM, 0.0f));
     }
 
     private boolean hasPersistedFields(Video entity) {
