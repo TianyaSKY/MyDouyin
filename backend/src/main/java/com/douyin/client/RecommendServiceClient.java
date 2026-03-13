@@ -268,6 +268,31 @@ public class RecommendServiceClient {
     }
 
     /**
+     * 获取用户初始兴趣向量（从 Milvus）
+     */
+    public List<Float> getUserInterestVector(Long userId) {
+        try {
+            String url = recommendServiceUrl + "/api/user/vector/interest/" + userId;
+
+            ResponseEntity<UserVectorResponse> response = restTemplate.getForEntity(
+                url, UserVectorResponse.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                log.info("Retrieved interest vector for user {}", userId);
+                return response.getBody().getVector();
+            }
+
+            log.debug("Interest vector not found for user {}", userId);
+            return null;
+
+        } catch (Exception e) {
+            log.error("Error getting interest vector for user {}", userId, e);
+            return null;
+        }
+    }
+
+    /**
      * 更新用户长期向量（到 Milvus）
      */
     public boolean updateUserLongTermVector(Long userId, List<Float> vector) {

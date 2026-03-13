@@ -101,6 +101,23 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
         }
     }
 
+    public List<Float> getUserInterestVector(Long userId) {
+        try {
+            List<Float> interestVec = recommendServiceClient.getUserInterestVector(userId);
+
+            if (interestVec != null && interestVec.size() == VECTOR_DIM) {
+                return interestVec;
+            }
+
+            log.debug("Interest vector not found for user: {}", userId);
+            return new ArrayList<>();
+
+        } catch (Exception e) {
+            log.error("Error getting interest vector for user: {}", userId, e);
+            return new ArrayList<>();
+        }
+    }
+
     @Override
     public void updateRealtimeVector(Long userId, Long videoId, EventType eventType) {
         try {
@@ -230,21 +247,48 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
 
             List<Float> shortVec = getUserRealtimeVector(userId);
             List<Double> longVec = getUserLongTermVector(userId);
+            List<Float> interestVec = getUserInterestVector(userId);
 
-            if (longVec.isEmpty()) {
+            boolean hasShortVec = hasValidVector(shortVec);
+            boolean hasLongVec = hasValidVector(longVec);
+            boolean hasInterestVec = hasValidVector(interestVec);
+
+            if (!hasShortVec && !hasLongVec && !hasInterestVec) {
+                return getDefaultVector();
+            }
+
+            if (!hasLongVec && !hasInterestVec) {
                 return shortVec;
             }
 
-            List<Float> fusedVec = new ArrayList<>(VECTOR_DIM);
-            double longTermWeight = 1.0 - shortTermWeight;
+            if (!hasLongVec) {
+                return blendShortAndInterest(shortVec, interestVec, shortTermWeight);
+            }
 
+            if (!hasInterestVec) {
+                return blendShortAndLong(shortVec, longVec, shortTermWeight);
+            }
+
+            double normalizedShortWeight = hasShortVec ? shortTermWeight : 0.0;
+            double normalizedLongWeight = hasShortVec ? 0.2 : 0.7;
+            double normalizedInterestWeight = hasShortVec ? 0.1 : 0.3;
+
+            if (!hasShortVec) {
+                return blendLongAndInterest(longVec, interestVec, normalizedLongWeight, normalizedInterestWeight);
+            }
+
+            List<Float> fusedVec = new ArrayList<>(VECTOR_DIM);
             for (int i = 0; i < VECTOR_DIM; i++) {
                 float shortVal = i < shortVec.size() ? shortVec.get(i) : 0f;
                 float longVal = i < longVec.size() ? longVec.get(i).floatValue() : 0f;
-                fusedVec.add((float) (shortVal * shortTermWeight + longVal * longTermWeight));
+                float interestVal = i < interestVec.size() ? interestVec.get(i) : 0f;
+                fusedVec.add((float) (shortVal * normalizedShortWeight
+                        + longVal * normalizedLongWeight
+                        + interestVal * normalizedInterestWeight));
             }
 
-            log.debug("Fused vector for user {} with short-term weight: {}", userId, shortTermWeight);
+            log.debug("Fused vector for user {} with weights short={}, long={}, interest={}",
+                    userId, normalizedShortWeight, normalizedLongWeight, normalizedInterestWeight);
             return fusedVec;
 
         } catch (Exception e) {
@@ -318,6 +362,45 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
             vector.add(0.0f);
         }
         return vector;
+    }
+
+    private boolean hasValidVector(List<?> vector) {
+        return vector != null
+                && vector.size() == VECTOR_DIM
+                && vector.stream().anyMatch(item -> item instanceof Number number && number.doubleValue() != 0.0d);
+    }
+
+    private List<Float> blendShortAndInterest(List<Float> shortVec, List<Float> interestVec, double shortWeight) {
+        List<Float> blendedVec = new ArrayList<>(VECTOR_DIM);
+        double interestWeight = 1.0 - shortWeight;
+        for (int i = 0; i < VECTOR_DIM; i++) {
+            float shortVal = i < shortVec.size() ? shortVec.get(i) : 0f;
+            float interestVal = i < interestVec.size() ? interestVec.get(i) : 0f;
+            blendedVec.add((float) (shortVal * shortWeight + interestVal * interestWeight));
+        }
+        return blendedVec;
+    }
+
+    private List<Float> blendShortAndLong(List<Float> shortVec, List<Double> longVec, double shortWeight) {
+        List<Float> blendedVec = new ArrayList<>(VECTOR_DIM);
+        double longWeight = 1.0 - shortWeight;
+        for (int i = 0; i < VECTOR_DIM; i++) {
+            float shortVal = i < shortVec.size() ? shortVec.get(i) : 0f;
+            float longVal = i < longVec.size() ? longVec.get(i).floatValue() : 0f;
+            blendedVec.add((float) (shortVal * shortWeight + longVal * longWeight));
+        }
+        return blendedVec;
+    }
+
+    private List<Float> blendLongAndInterest(List<Double> longVec, List<Float> interestVec,
+                                             double longWeight, double interestWeight) {
+        List<Float> blendedVec = new ArrayList<>(VECTOR_DIM);
+        for (int i = 0; i < VECTOR_DIM; i++) {
+            float longVal = i < longVec.size() ? longVec.get(i).floatValue() : 0f;
+            float interestVal = i < interestVec.size() ? interestVec.get(i) : 0f;
+            blendedVec.add((float) (longVal * longWeight + interestVal * interestWeight));
+        }
+        return blendedVec;
     }
 
     /**

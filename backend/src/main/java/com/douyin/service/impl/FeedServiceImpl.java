@@ -17,10 +17,14 @@ import com.douyin.service.VideoStatsDailyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -51,8 +55,9 @@ public class FeedServiceImpl implements IFeedService {
 
     // Redis ZSET：全局热门视频池 key。
     private static final String HOT_VIDEO_KEY = "video:hot";
-    // Redis Set：用户已看视频集合 key 前缀。
-    private static final String USER_SEEN_KEY_PREFIX = "user:seen:";
+    // Redis String：用户已看视频单条记录 key 前缀。
+    private static final String USER_SEEN_KEY_PREFIX = "user:seen:item:";
+    private static final long USER_SEEN_EXPIRE_DAYS = 7L;
     // 候选召回放大倍数，避免过滤和排序后结果不足。
     private static final int RECALL_MULTIPLIER = 3;
     // 热门池召回时的放大倍数，用于抵消已看过滤造成的损耗。
@@ -162,13 +167,15 @@ public class FeedServiceImpl implements IFeedService {
      */
     private Set<Long> getUserSeenIds(Long userId) {
         try {
-            String seenKey = USER_SEEN_KEY_PREFIX + userId;
-            Set<Object> seenIds = redisTemplate.opsForSet().members(seenKey);
-            if (seenIds == null || seenIds.isEmpty()) {
+            String pattern = USER_SEEN_KEY_PREFIX + userId + ":*";
+            Set<String> matchedKeys = scanKeys(pattern);
+            if (matchedKeys.isEmpty()) {
                 return Collections.emptySet();
             }
-            return seenIds.stream()
-                .map(id -> Long.parseLong(id.toString()))
+
+            return matchedKeys.stream()
+                .map(this::extractVideoIdFromSeenKey)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         } catch (Exception e) {
             log.error("Error getting user seen set", e);
@@ -431,18 +438,56 @@ public class FeedServiceImpl implements IFeedService {
     }
 
     /**
-     * 更新用户已看集合（Redis Set，7天过期）
+     * 更新用户已看集合（单条记录单 key，独立 7 天过期）
      */
     private void updateUserSeenSet(Long userId, List<Video> videos) {
         try {
-            String seenKey = USER_SEEN_KEY_PREFIX + userId;
             for (Video video : videos) {
-                redisTemplate.opsForSet().add(seenKey, video.getId().toString());
+                if (video == null || video.getId() == null) {
+                    continue;
+                }
+                String seenKey = buildSeenKey(userId, video.getId());
+                redisTemplate.opsForValue().set(seenKey, "1", USER_SEEN_EXPIRE_DAYS,
+                        java.util.concurrent.TimeUnit.DAYS);
             }
-            // 设置7天过期
-            redisTemplate.expire(seenKey, 7, java.util.concurrent.TimeUnit.DAYS);
         } catch (Exception e) {
             log.error("Error updating user seen set", e);
         }
+    }
+
+    private String buildSeenKey(Long userId, Long videoId) {
+        return USER_SEEN_KEY_PREFIX + userId + ":" + videoId;
+    }
+
+    private Long extractVideoIdFromSeenKey(String key) {
+        int lastColon = key.lastIndexOf(':');
+        if (lastColon < 0 || lastColon == key.length() - 1) {
+            return null;
+        }
+        try {
+            return Long.parseLong(key.substring(lastColon + 1));
+        } catch (NumberFormatException e) {
+            log.warn("Invalid seen key format: {}", key);
+            return null;
+        }
+    }
+
+    private Set<String> scanKeys(String pattern) {
+        Set<String> keys = redisTemplate.execute((RedisConnection connection) -> {
+            Set<String> keys = new HashSet<>();
+            ScanOptions options = ScanOptions.scanOptions()
+                    .match(pattern)
+                    .count(1000)
+                    .build();
+            try (Cursor<byte[]> cursor = connection.scan(options)) {
+                while (cursor.hasNext()) {
+                    keys.add(new String(cursor.next(), StandardCharsets.UTF_8));
+                }
+            } catch (Exception e) {
+                log.error("Error scanning Redis keys by pattern: {}", pattern, e);
+            }
+            return keys;
+        });
+        return keys == null ? Collections.emptySet() : keys;
     }
 }
