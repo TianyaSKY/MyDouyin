@@ -4,42 +4,40 @@ import { Home, User, Plus } from 'lucide-react';
 
 const BottomNavigation = ({ onUpload }) => {
     return (
-        <div className="fixed bottom-0 left-0 w-full h-16 bg-black/70 backdrop-blur-xl border-t border-white/10 flex justify-around items-center z-50">
+        <div className="dy-nav">
             <NavLink
                 to="/"
                 className={({ isActive }) =>
-                    `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-white' : 'text-gray-400 hover:text-white'}`
+                    `dy-nav-item ${isActive ? 'dy-nav-item--active' : ''}`
                 }
             >
                 {({ isActive }) => (
                     <>
-                        <Home size={24} strokeWidth={isActive ? 3 : 2} />
-                        <span className="text-[10px] mt-1">首页</span>
+                        <Home size={22} strokeWidth={isActive ? 2.8 : 2} />
+                        <span className="dy-nav-label">首页</span>
                     </>
                 )}
             </NavLink>
 
             <div
-                className="flex flex-col items-center justify-center w-full h-full cursor-pointer"
+                className="dy-nav-item"
                 onClick={onUpload}
             >
-                <div className="w-12 h-8 bg-gradient-to-r from-cyan-400 to-rose-500 rounded-[10px] flex items-center justify-center relative shadow-[0_8px_20px_rgba(0,242,234,0.25)]">
-                    <div className="w-11 h-8 bg-white rounded-[9px] flex items-center justify-center absolute left-[2px]">
-                        <Plus size={20} className="text-black font-bold" />
-                    </div>
+                <div className="dy-nav-upload-btn">
+                    <Plus size={18} strokeWidth={3} className="text-black" />
                 </div>
             </div>
 
             <NavLink
                 to="/me"
                 className={({ isActive }) =>
-                    `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-white' : 'text-gray-400 hover:text-white'}`
+                    `dy-nav-item ${isActive ? 'dy-nav-item--active' : ''}`
                 }
             >
                 {({ isActive }) => (
                     <>
-                        <User size={24} strokeWidth={isActive ? 3 : 2} />
-                        <span className="text-[10px] mt-1">我的</span>
+                        <User size={22} strokeWidth={isActive ? 2.8 : 2} />
+                        <span className="dy-nav-label">我</span>
                     </>
                 )}
             </NavLink>

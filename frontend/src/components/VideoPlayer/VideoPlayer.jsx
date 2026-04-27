@@ -10,6 +10,9 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
     const videoRef = useRef(null);
     const [playing, setPlaying] = useState(false);
     const [fitMode, setFitMode] = useState('contain'); // 'contain' or 'cover'
+    const [progress, setProgress] = useState(0);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
     const { track } = useAnalytics();
 
 
@@ -100,6 +103,12 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
 
     const handleTimeUpdate = () => {
         syncWatchProgress();
+        const videoEl = videoRef.current;
+        if (videoEl && videoEl.duration) {
+            setProgress((videoEl.currentTime / videoEl.duration) * 100);
+            setCurrentTime(videoEl.currentTime);
+            setDuration(videoEl.duration);
+        }
     };
 
     const handleEnded = () => {
@@ -122,29 +131,43 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
         });
     };
 
+    const handleProgressClick = (e) => {
+        const videoEl = videoRef.current;
+        if (!videoEl || !videoEl.duration) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const pct = x / rect.width;
+        videoEl.currentTime = pct * videoEl.duration;
+    };
+
     const toggleFitMode = () => {
         setFitMode(prev => prev === 'contain' ? 'cover' : 'contain');
     };
 
+    // Format time as mm:ss
+    const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
 
     return (
-        <div className="relative w-full h-full bg-black snap-start flex justify-center items-center overflow-hidden">
+        <div className="dy-player">
             {/* Background Layer for 'contain' mode to provide blur effect */}
             {fitMode === 'contain' && (
                 <div
-                    className="absolute inset-0 z-0 opacity-50 bg-cover bg-center scale-110 blur-2xl transition-opacity duration-700"
+                    className="dy-player-bg"
                     style={{ backgroundImage: `url(${getMediaUrl(video.coverUrl)})` }}
                 />
             )}
-
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none z-[1]" />
 
             <video
                 ref={videoRef}
                 onClick={handleVideoPress}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={handleEnded}
-                className={`w-full h-full relative z-[1] transition-all duration-300 ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}`}
+                className={`dy-player-video ${fitMode === 'contain' ? 'dy-player-video--contain' : 'dy-player-video--cover'}`}
                 src={getMediaUrl(video.videoUrl)}
                 poster={getMediaUrl(video.coverUrl)}
                 playsInline
@@ -153,11 +176,11 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
             {/* Volume Control - Top Right */}
             <VolumeControl videoRef={videoRef} />
 
-            {/* Play/Pause Indicator (optional overlay) */}
+            {/* Play/Pause Indicator */}
             {!playing && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                    <div className="bg-black/35 border border-white/30 rounded-full p-4 backdrop-blur-md shadow-[0_12px_28px_rgba(0,0,0,0.45)]">
-                        <Play size={44} fill="white" className="text-white ml-1" />
+                <div className="dy-player-pause-indicator">
+                    <div className="dy-player-pause-icon">
+                        <Play size={48} fill="white" className="ml-1" />
                     </div>
                 </div>
             )}
@@ -171,6 +194,25 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
                 isActive={isActive}
                 onDelete={onDelete}
             />
+
+            {/* Bottom Progress Bar — Douyin style */}
+            <div className="dy-progress" onClick={handleProgressClick}>
+                <div className="dy-progress-bar">
+                    <div
+                        className="dy-progress-fill"
+                        style={{ width: `${progress}%` }}
+                    />
+                    <div
+                        className="dy-progress-thumb"
+                        style={{ left: `${progress}%` }}
+                    />
+                </div>
+                <div className="dy-progress-time">
+                    <span>{formatTime(currentTime)}</span>
+                    <span> / </span>
+                    <span>{formatTime(duration)}</span>
+                </div>
+            </div>
         </div>
     );
 };

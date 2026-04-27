@@ -107,12 +107,12 @@ export const AuthForm = ({ mode, onModeChange }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Username Input */}
-      <div className="space-y-1">
-        <label htmlFor="username" className="block text-sm font-medium text-gray-300">
+      <div className="space-y-2">
+        <label htmlFor="username" className="block text-sm font-medium text-white/50 tracking-wide">
           用户名
         </label>
         <div className="relative">
-          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
           <input
             id="username"
             type="text"
@@ -129,12 +129,12 @@ export const AuthForm = ({ mode, onModeChange }) => {
       </div>
 
       {/* Password Input */}
-      <div className="space-y-1">
-        <label htmlFor="password" className="block text-sm font-medium text-gray-300">
+      <div className="space-y-2">
+        <label htmlFor="password" className="block text-sm font-medium text-white/50 tracking-wide">
           密码
         </label>
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
           <input
             id="password"
             type="password"
@@ -152,12 +152,12 @@ export const AuthForm = ({ mode, onModeChange }) => {
 
       {/* Nickname Input (Register only) */}
       {isRegister && (
-        <div className="space-y-1">
-          <label htmlFor="nickname" className="block text-sm font-medium text-gray-300">
+        <div className="space-y-2">
+          <label htmlFor="nickname" className="block text-sm font-medium text-white/50 tracking-wide">
             昵称 (可选)
           </label>
           <div className="relative">
-            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20" />
             <input
               id="nickname"
               type="text"
@@ -177,7 +177,7 @@ export const AuthForm = ({ mode, onModeChange }) => {
       {isRegister && (
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-1">
-            <label className="block text-sm font-medium text-gray-300 flex items-center gap-2">
+            <label className="block text-sm font-medium text-white/50 tracking-wide flex items-center gap-2">
               感兴趣的标签
             </label>
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full transition-colors ${selectedTags.length === 10 ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-gray-400'}`}>
@@ -315,7 +315,7 @@ export const AuthForm = ({ mode, onModeChange }) => {
       </button>
 
       {/* Mode Switch */}
-      <div className="text-center text-sm text-gray-400">
+      <div className="text-center text-sm text-white/40">
         {isRegister ? (
           <>
             已有账号？{' '}

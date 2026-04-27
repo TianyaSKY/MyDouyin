@@ -85,7 +85,7 @@ const VideoFeed = () => {
 
     return (
         <div
-            className="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar feed-atmosphere"
+            className="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-black"
             onScroll={handleScroll}
         >
             {videos.map((video, index) => (

@@ -1,0 +1,394 @@
+/* ═══════════════════════════════════════════════
+   Premium Auth Page Styles
+   ═══════════════════════════════════════════════ */
+
+/* ─── Page Container ─── */
+.auth-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #050505;
+  overflow: hidden;
+}
+
+/* ─── Animated Mesh Gradient Canvas ─── */
+.auth-mesh-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Noise Texture Overlay ─── */
+.auth-noise-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+}
+
+/* ─── Subtle Grid Overlay ─── */
+.auth-grid-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.02;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ─── Floating Particles ─── */
+.auth-particles-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.auth-particle {
+  position: absolute;
+  width: var(--particle-size);
+  height: var(--particle-size);
+  border-radius: 50%;
+  filter: blur(1px);
+  animation: authParticleFloat var(--particle-duration) ease-in-out infinite;
+  animation-delay: var(--particle-delay);
+  opacity: 0;
+}
+
+@keyframes authParticleFloat {
+  0%, 100% {
+    transform: translateY(0) translateX(0) scale(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-100px) translateX(30px) scale(1.2);
+  }
+  90% {
+    opacity: 0.3;
+    transform: translateY(-200px) translateX(-20px) scale(0.8);
+  }
+}
+
+/* ─── Floating Decorative Icons ─── */
+.auth-floating-icons {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.auth-float-icon {
+  position: absolute;
+  opacity: 0.06;
+  color: white;
+}
+
+.auth-float-1 {
+  width: 40px; height: 40px;
+  top: 15%; left: 8%;
+  animation: authIconDrift 12s ease-in-out infinite;
+}
+
+.auth-float-2 {
+  width: 32px; height: 32px;
+  top: 25%; right: 12%;
+  animation: authIconDrift 15s ease-in-out infinite 2s;
+}
+
+.auth-float-3 {
+  width: 36px; height: 36px;
+  bottom: 20%; left: 15%;
+  animation: authIconDrift 18s ease-in-out infinite 4s;
+}
+
+.auth-float-4 {
+  width: 28px; height: 28px;
+  bottom: 30%; right: 8%;
+  animation: authIconDrift 14s ease-in-out infinite 1s;
+}
+
+.auth-float-5 {
+  width: 34px; height: 34px;
+  top: 60%; left: 5%;
+  animation: authIconDrift 16s ease-in-out infinite 3s;
+}
+
+@keyframes authIconDrift {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(15px, -25px) rotate(10deg);
+  }
+  50% {
+    transform: translate(-10px, -40px) rotate(-5deg);
+  }
+  75% {
+    transform: translate(20px, -15px) rotate(8deg);
+  }
+}
+
+/* ─── Card Wrapper (entrance animation) ─── */
+.auth-card-wrapper {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 1rem;
+  opacity: 0;
+  transform: translateY(30px) scale(0.96);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-card-wrapper.auth-card-enter {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ─── Card Outer Glow ─── */
+.auth-card-glow {
+  position: absolute;
+  inset: -2px;
+  border-radius: 28px;
+  background: linear-gradient(
+    135deg,
+    rgba(225, 29, 72, 0.15),
+    rgba(139, 92, 246, 0.08),
+    rgba(0, 242, 234, 0.10),
+    rgba(225, 29, 72, 0.12)
+  );
+  background-size: 300% 300%;
+  animation: authGlowShift 8s ease-in-out infinite;
+  filter: blur(1px);
+  z-index: -1;
+}
+
+@keyframes authGlowShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ─── Card Body ─── */
+.auth-card-new {
+  position: relative;
+  background: rgba(12, 12, 14, 0.85);
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 26px;
+  padding: 2.5rem 2rem 2rem;
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  overflow: hidden;
+}
+
+.auth-card-new::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.12),
+    rgba(225, 29, 72, 0.2),
+    rgba(255, 255, 255, 0.12),
+    transparent
+  );
+}
+
+/* ─── Brand Logo ─── */
+.auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 2rem;
+}
+
+.auth-brand-icon {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-brand-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #E11D48, #8B5CF6, #00F2EA);
+  animation: authBrandPulse 3s ease-in-out infinite;
+}
+
+.auth-brand-ring::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 12px;
+  background: #0c0c0e;
+}
+
+@keyframes authBrandPulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.auth-brand-music-icon {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  color: white;
+}
+
+.auth-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-brand-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.auth-brand-subtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+/* ─── Tab Control (Sliding Pill) ─── */
+.auth-tabs {
+  position: relative;
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.auth-tabs-indicator {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.25), rgba(225, 29, 72, 0.15));
+  border-radius: 11px;
+  border: 1px solid rgba(225, 29, 72, 0.3);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 20px rgba(225, 29, 72, 0.1);
+}
+
+.auth-tab {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  padding: 10px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  text-align: center;
+}
+
+.auth-tab.active {
+  color: #FB7185;
+}
+
+.auth-tab:hover:not(.active) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ─── Welcome Text ─── */
+.auth-welcome {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+.auth-welcome-title {
+  font-family: 'Sora', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.auth-welcome-desc {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1.5;
+}
+
+/* ─── Footer ─── */
+.auth-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.auth-footer-text {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.03em;
+}
+
+/* ─── Loading State ─── */
+.auth-loading {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+}
+
+.auth-loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.auth-loading-icon {
+  width: 32px;
+  height: 32px;
+  color: #E11D48;
+  animation: spin 1s linear infinite;
+}
+
+.auth-loading-text {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+}
