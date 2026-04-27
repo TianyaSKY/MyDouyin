@@ -123,8 +123,6 @@ QINIU_BUCKET_NAME=your_bucket
 QINIU_PUBLIC_BASE_URL=https://your-cdn-domain
 ```
 
-不要把真实密钥提交到仓库。
-
 ## 快速开始
 
 ### 1. 启动基础设施

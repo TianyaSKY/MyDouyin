@@ -58,4 +58,21 @@ public interface VideoStatsDailyMapper extends BaseMapper<VideoStatsDaily> {
     @Select("SELECT COALESCE(SUM(impr_cnt), 0) as imprCnt, COALESCE(SUM(like_cnt), 0) as likeCnt " +
             "FROM video_daily_stats WHERE video_id = #{videoId}")
     VideoStatsDaily sumStatsByVideoId(@Param("videoId") Long videoId);
+
+    /**
+     * 批量获取每个视频的最新一天统计数据（用于热度计算）。
+     * 使用子查询先找出每个 video_id 的最新日期，再关联取出完整行。
+     */
+    @Select("<script>" +
+            "SELECT s.* FROM video_daily_stats s " +
+            "INNER JOIN (" +
+            "  SELECT video_id, MAX(date) AS max_date FROM video_daily_stats " +
+            "  WHERE video_id IN " +
+            "  <foreach collection='videoIds' item='id' open='(' separator=',' close=')'>" +
+            "    #{id}" +
+            "  </foreach>" +
+            "  GROUP BY video_id" +
+            ") t ON s.video_id = t.video_id AND s.date = t.max_date" +
+            "</script>")
+    List<VideoStatsDaily> batchGetLatestStats(@Param("videoIds") List<Long> videoIds);
 }

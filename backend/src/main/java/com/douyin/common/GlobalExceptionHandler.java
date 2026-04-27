@@ -29,13 +29,23 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handle business logic errors thrown as RuntimeException.
+     * Handle business logic errors (known, user-facing).
+     */
+    @ExceptionHandler(BusinessException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleBusinessException(BusinessException ex) {
+        log.warn("Business error: {}", ex.getMessage());
+        return Result.fail(ex.getCode(), ex.getMessage());
+    }
+
+    /**
+     * Handle unexpected RuntimeException as 500 (do NOT expose internal message).
      */
     @ExceptionHandler(RuntimeException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<Void> handleRuntimeException(RuntimeException ex) {
-        log.warn("Business error: {}", ex.getMessage());
-        return Result.fail(400, ex.getMessage());
+        log.error("Unexpected runtime error", ex);
+        return Result.fail(500, "服务器内部错误");
     }
 
     /**
@@ -63,3 +73,4 @@ public class GlobalExceptionHandler {
         return Result.fail(404, "资源不存在");
     }
 }
+

@@ -1,5 +1,6 @@
 package com.douyin.service.impl;
 
+import com.douyin.common.BusinessException;
 import com.douyin.entity.dto.UploadCompleteRequest;
 import com.douyin.entity.dto.UploadCompleteResponse;
 import com.douyin.entity.dto.UploadInitRequest;
@@ -53,53 +54,29 @@ public class VideoUploadServiceImpl implements VideoUploadService {
     @Value("${app.upload.cover-url-prefix:/uploads/covers/}")
     private String coverUrlPrefix;
 
+    private static final List<String> ALLOWED_IMAGE_EXTENSIONS = List.of(".jpg", ".jpeg", ".png", ".webp", ".gif");
+    private static final List<String> ALLOWED_VIDEO_EXTENSIONS = List.of(".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv");
+
     @Override
     public String uploadCover(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new RuntimeException("Cover file cannot be empty");
+            throw new BusinessException("Cover file cannot be empty");
         }
         
         // Validate image type
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
-            throw new RuntimeException("Only image files are allowed");
+            throw new BusinessException("Only image files are allowed");
         }
 
         try {
-            // Generate unique filename via MD5 of file content to avoid duplicates and strange chars
             String originalFilename = file.getOriginalFilename();
-            String extension = safeExtension(originalFilename);
-            if (".mp4".equals(extension)) { // safeExtension defaults to .mp4, fix for images
-                extension = originalFilename != null && originalFilename.lastIndexOf(".") > 0 ? 
-                        originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase(Locale.ROOT) : ".jpg";
-            }
-            // Better/Safe extension handling for images
-            if (!List.of(".jpg", ".jpeg", ".png", ".webp", ".gif").contains(extension)) {
-                 // Fallback or strict check? Let's strict check common types or just allow save.
-                 // safeExtension implementation in this file is video-centric.
-                 // Let's implement a simple image extension extractor locally or improve safeExtension if it was generic, 
-                 // but safeExtension in this file forces .mp4.
-                 // Let's just use original extension if valid.
-                 int dotIndex = originalFilename.lastIndexOf('.');
-                 if (dotIndex != -1) {
-                     extension = originalFilename.substring(dotIndex).toLowerCase(Locale.ROOT);
-                 } else {
-                     extension = ".jpg";
-                 }
-            }
+            String extension = resolveExtension(originalFilename, ALLOWED_IMAGE_EXTENSIONS, ".jpg");
 
             // Calculate hash for deduplication/naming
-            String fileHash;
-            try (InputStream in = file.getInputStream()) {
-                 // Create a temp hex of the file
-                 // Re-reading stream might be tricky if not supported, but MultipartFile usually supports multiple getInputStream() or we can read bytes.
-                 // Let's just use UUID for simplicity if hash is too expensive or complex here? 
-                 // The requirement didn't specify deduplication for covers, but it's good practice.
-                 // Let's read bytes since covers are small.
-                 byte[] bytes = file.getBytes();
-                 MessageDigest md = MessageDigest.getInstance("MD5");
-                 fileHash = toHex(md.digest(bytes));
-            }
+            byte[] bytes = file.getBytes();
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            String fileHash = toHex(md.digest(bytes));
 
             String finalName = fileHash + extension;
             Path coverDir = getBaseRoot().resolve(coverDirName);
@@ -115,7 +92,7 @@ public class VideoUploadServiceImpl implements VideoUploadService {
             return normalizeUrlPrefix(coverUrlPrefix) + finalName;
 
         } catch (IOException | NoSuchAlgorithmException e) {
-            throw new RuntimeException("Failed to upload cover image", e);
+            throw new BusinessException("Failed to upload cover image");
         }
     }
 
@@ -146,10 +123,10 @@ public class VideoUploadServiceImpl implements VideoUploadService {
     public void uploadChunk(String uploadId, Integer chunkIndex, MultipartFile chunk) {
         validateUploadId(uploadId);
         if (chunkIndex == null || chunkIndex < 0) {
-            throw new RuntimeException("chunkIndex must be >= 0");
+            throw new BusinessException("chunkIndex must be >= 0");
         }
         if (chunk == null || chunk.isEmpty()) {
-            throw new RuntimeException("chunk cannot be empty");
+            throw new BusinessException("chunk cannot be empty");
         }
 
         Path uploadDir = getTempRoot().resolve(uploadId);
@@ -171,7 +148,7 @@ public class VideoUploadServiceImpl implements VideoUploadService {
         String normalizedHash = normalizeAndValidateHash(request.getFileHash());
         String expectedUploadId = buildUploadId(normalizedHash, request.getFileSize(), request.getTotalChunks());
         if (!expectedUploadId.equals(request.getUploadId())) {
-            throw new RuntimeException("uploadId does not match file metadata");
+            throw new BusinessException("uploadId does not match file metadata");
         }
 
         // 再次秒传兜底：并发场景下可能在 init 后已有其他请求完成了同 hash 文件。
@@ -193,12 +170,12 @@ public class VideoUploadServiceImpl implements VideoUploadService {
             mergeChunks(uploadDir, request.getTotalChunks(), mergedFile);
             long mergedSize = Files.size(mergedFile);
             if (mergedSize != request.getFileSize()) {
-                throw new RuntimeException("merged file size mismatch");
+                throw new BusinessException("merged file size mismatch");
             }
 
             String mergedHash = calculateFileHash(mergedFile, normalizedHash.length());
             if (!normalizedHash.equals(mergedHash)) {
-                throw new RuntimeException("file hash mismatch");
+                throw new BusinessException("file hash mismatch");
             }
 
             String extension = safeExtension(request.getFileName());
@@ -253,12 +230,12 @@ public class VideoUploadServiceImpl implements VideoUploadService {
 
     private void ensureAllChunksExist(Path uploadDir, int totalChunks) {
         if (!Files.exists(uploadDir)) {
-            throw new RuntimeException("upload session does not exist");
+            throw new BusinessException("upload session does not exist");
         }
         for (int i = 0; i < totalChunks; i++) {
             Path chunkPath = uploadDir.resolve(i + ".part");
             if (!Files.exists(chunkPath)) {
-                throw new RuntimeException("missing chunk: " + i);
+                throw new BusinessException("missing chunk: " + i);
             }
         }
     }
@@ -296,7 +273,7 @@ public class VideoUploadServiceImpl implements VideoUploadService {
         } else if (hashLength == 64) {
             algorithm = "SHA-256";
         } else {
-            throw new RuntimeException("unsupported fileHash length");
+            throw new BusinessException("unsupported fileHash length");
         }
         try (InputStream inputStream = Files.newInputStream(filePath)) {
             MessageDigest digest = MessageDigest.getInstance(algorithm);
@@ -313,11 +290,11 @@ public class VideoUploadServiceImpl implements VideoUploadService {
 
     private String normalizeAndValidateHash(String hash) {
         if (hash == null || hash.isBlank()) {
-            throw new RuntimeException("fileHash cannot be blank");
+            throw new BusinessException("fileHash cannot be blank");
         }
         String normalized = hash.trim().toLowerCase(Locale.ROOT);
         if (!normalized.matches("^[a-f0-9]{32}$") && !normalized.matches("^[a-f0-9]{64}$")) {
-            throw new RuntimeException("fileHash must be MD5(32) or SHA-256(64) hex");
+            throw new BusinessException("fileHash must be MD5(32) or SHA-256(64) hex");
         }
         return normalized;
     }
@@ -337,6 +314,27 @@ public class VideoUploadServiceImpl implements VideoUploadService {
         return extension;
     }
 
+    /**
+     * 通用扩展名解析：从文件名中提取扩展名，若不在白名单内则使用默认值。
+     */
+    private String resolveExtension(String fileName, List<String> allowedExtensions, String defaultExt) {
+        if (fileName == null) {
+            return defaultExt;
+        }
+        int dot = fileName.lastIndexOf('.');
+        if (dot < 0 || dot == fileName.length() - 1) {
+            return defaultExt;
+        }
+        String extension = fileName.substring(dot).toLowerCase(Locale.ROOT);
+        if (!extension.matches("^\\.[a-z0-9]{1,10}$")) {
+            return defaultExt;
+        }
+        if (!allowedExtensions.contains(extension)) {
+            return defaultExt;
+        }
+        return extension;
+    }
+
     private String normalizeUrlPrefix(String prefix) {
         if (prefix == null || prefix.isBlank()) {
             return "/uploads/videos/";
@@ -350,10 +348,10 @@ public class VideoUploadServiceImpl implements VideoUploadService {
 
     private void validateUploadId(String uploadId) {
         if (uploadId == null || uploadId.isBlank()) {
-            throw new RuntimeException("uploadId cannot be blank");
+            throw new BusinessException("uploadId cannot be blank");
         }
         if (!uploadId.matches("^[a-f0-9]{32,64}_[0-9]+_[0-9]+$")) {
-            throw new RuntimeException("invalid uploadId");
+            throw new BusinessException("invalid uploadId");
         }
     }
 

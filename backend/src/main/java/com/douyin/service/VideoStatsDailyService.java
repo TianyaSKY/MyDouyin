@@ -5,7 +5,9 @@ import com.douyin.entity.VideoStatsDaily;
 import com.douyin.entity.enums.EventType;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 public interface VideoStatsDailyService extends IService<VideoStatsDaily> {
 
@@ -29,4 +31,9 @@ public interface VideoStatsDailyService extends IService<VideoStatsDaily> {
     Long getTotalLikesByAuthor(Long authorId);
 
     VideoStatsDaily getTotalStatsByVideo(Long videoId);
+
+    /**
+     * 批量获取每个视频的最新一天统计，返回 videoId -> stats 映射。
+     */
+    Map<Long, VideoStatsDaily> batchGetLatestStatsMap(Collection<Long> videoIds);
 }

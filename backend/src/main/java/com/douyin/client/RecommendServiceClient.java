@@ -2,6 +2,7 @@ package com.douyin.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -18,6 +19,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class RecommendServiceClient {
 
     @Value("${recommend.service.url:http://localhost:18101}")
@@ -25,11 +27,6 @@ public class RecommendServiceClient {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    public RecommendServiceClient() {
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
-    }
 
     /**
      * 生成视频向量
