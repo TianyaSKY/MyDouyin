@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { AuthForm } from './AuthForm';
+import { InterestBubblePage } from './InterestBubblePage';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { Loader2, Music, Film, Heart, Star, Sparkles } from 'lucide-react';
 
@@ -131,14 +132,61 @@ const FloatingIcons = () => (
 
 /* ─── Main LoginPage ─── */
 export const LoginPage = ({ mode, onModeChange }) => {
-  const { checkingAuth } = useAuthContext();
+  const { checkingAuth, loading, error, handleRegister, clearError } = useAuthContext();
   const [mounted, setMounted] = useState(false);
+
+  // Multi-step registration state
+  const [registrationStep, setRegistrationStep] = useState('form'); // 'form' | 'interests'
+  const [pendingRegistration, setPendingRegistration] = useState(null);
 
   useEffect(() => {
     // Trigger entrance animation
     const timer = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(timer);
   }, []);
+
+  // Reset step when switching away from register mode
+  useEffect(() => {
+    if (mode !== 'register') {
+      setRegistrationStep('form');
+      setPendingRegistration(null);
+    }
+  }, [mode]);
+
+  // Called by AuthForm when register form is filled
+  const handleProceedToInterests = useCallback((formData) => {
+    setPendingRegistration(formData);
+    setRegistrationStep('interests');
+    clearError();
+  }, [clearError]);
+
+  // Called by InterestBubblePage when user confirms
+  const handleInterestComplete = useCallback(async (tags) => {
+    if (!pendingRegistration) return;
+    const { username, password, nickname } = pendingRegistration;
+    const success = await handleRegister(username, password, nickname, tags);
+    if (success) {
+      setPendingRegistration(null);
+      setRegistrationStep('form');
+    }
+  }, [pendingRegistration, handleRegister]);
+
+  // Called by InterestBubblePage when user skips
+  const handleInterestSkip = useCallback(async () => {
+    if (!pendingRegistration) return;
+    const { username, password, nickname } = pendingRegistration;
+    const success = await handleRegister(username, password, nickname, []);
+    if (success) {
+      setPendingRegistration(null);
+      setRegistrationStep('form');
+    }
+  }, [pendingRegistration, handleRegister]);
+
+  // Go back from interest page to form
+  const handleBackToForm = useCallback(() => {
+    setRegistrationStep('form');
+    clearError();
+  }, [clearError]);
 
   if (checkingAuth) {
     return (
@@ -154,6 +202,20 @@ export const LoginPage = ({ mode, onModeChange }) => {
     );
   }
 
+  // ─── Interest Bubble Page (Step 2 of registration) ───
+  if (registrationStep === 'interests') {
+    return (
+      <InterestBubblePage
+        onComplete={handleInterestComplete}
+        onSkip={handleInterestSkip}
+        onBack={handleBackToForm}
+        loading={loading}
+        error={error}
+      />
+    );
+  }
+
+  // ─── Auth Form Page (Login / Step 1 of registration) ───
   // Generate random particles
   const particles = Array.from({ length: 20 }, (_, i) => ({
     id: i,
@@ -209,7 +271,11 @@ export const LoginPage = ({ mode, onModeChange }) => {
           </div>
 
           {/* Form */}
-          <AuthForm mode={mode} onModeChange={onModeChange} />
+          <AuthForm
+            mode={mode}
+            onModeChange={onModeChange}
+            onProceedToInterests={handleProceedToInterests}
+          />
 
           {/* Footer */}
           <div className="auth-footer">
