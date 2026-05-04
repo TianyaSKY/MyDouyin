@@ -60,7 +60,7 @@ jwt:
 app:
   media-base-url: ${MEDIA_BASE_URL:http://localhost:18081}
   upload:
-    base-dir: storage
+    base-dir: ../storage
     temp-dir: tmp
     video-dir: videos
     url-prefix: /uploads/videos/
