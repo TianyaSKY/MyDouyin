@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Heart, Plus, Maximize2, Minimize2, Trash2, Share2, MessageCircle } from 'lucide-react';
 import { likeVideo, unlikeVideo, getVideoLikeStatus, deleteVideo, getShareCount, shareVideo } from '../../api/video';
 import { getCommentCount } from '../../api/comment';
@@ -9,6 +10,7 @@ import SharePanel from '../Common/SharePanel';
 import avatarImg from '../../resource/avatar.jpg';
 
 const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete, onOpenComments }) => {
+    const navigate = useNavigate();
     const { token, user } = useAuthContext();
     const { track } = useAnalytics();
     const [liked, setLiked] = useState(video.isLiked || false); // Default from prop
@@ -104,7 +106,10 @@ const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete, onOpenC
     return (
         <div className="dy-sidebar">
             {/* Avatar */}
-            <div className="dy-sidebar-avatar-wrap">
+            <div className="dy-sidebar-avatar-wrap" onClick={() => {
+                const targetPath = user && user.userId === video.authorId ? '/me' : `/user/${video.authorId}`;
+                navigate(targetPath);
+            }}>
                 <div className="dy-sidebar-avatar">
                     <img
                         src={avatarImg}

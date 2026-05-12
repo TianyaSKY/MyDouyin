@@ -33,6 +33,15 @@ export async function getAuthorVideos(token, authorId, current = 1, size = 20) {
   return json.data;
 }
 
+export async function getLikedVideos(token, userId, current = 1, size = 18) {
+  const resp = await apiFetch(`/api/videos/liked/${userId}?current=${current}&size=${size}`, token);
+  const json = await resp.json();
+  if (json.code !== 200) {
+    throw new Error(json.message || '获取喜欢列表失败');
+  }
+  return json.data;
+}
+
 export async function likeVideo(token, videoId) {
   const resp = await apiFetch(`/api/videos/${videoId}/like`, token, {
     method: 'POST'

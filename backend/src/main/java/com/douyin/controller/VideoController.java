@@ -84,6 +84,41 @@ public class VideoController {
     }
 
     /**
+     * GET /api/videos/liked/{userId} - List videos liked by a user (paginated)
+     */
+    @GetMapping("/liked/{userId}")
+    public Result<Map<String, Object>> listLikedVideos(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int current,
+            @RequestParam(defaultValue = "18") int size) {
+        IPage<Long> likedVideoIds = userVideoActionService.getLikedVideoIds(userId, current, size);
+
+        List<Video> videos = new java.util.ArrayList<>();
+        if (likedVideoIds.getRecords() != null && !likedVideoIds.getRecords().isEmpty()) {
+            List<Video> found = videoService.listByIds(likedVideoIds.getRecords());
+            // Preserve the order from likedVideoIds
+            Map<Long, Video> videoMap = new HashMap<>();
+            for (Video v : found) {
+                toPublicUrls(v);
+                videoMap.put(v.getId(), v);
+            }
+            for (Long vid : likedVideoIds.getRecords()) {
+                Video v = videoMap.get(vid);
+                if (v != null) {
+                    videos.add(v);
+                }
+            }
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("records", videos);
+        data.put("total", likedVideoIds.getTotal());
+        data.put("current", likedVideoIds.getCurrent());
+        data.put("size", likedVideoIds.getSize());
+        return Result.ok(data);
+    }
+
+    /**
      * POST /api/videos - Create video record
      * 该接口仅创建视频业务记录（标题、作者、videoUrl 等），
      * 不负责二进制文件上传；文件上传走 /upload/init|chunk|complete 三段式流程。

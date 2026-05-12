@@ -1,18 +1,22 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthContext } from '../../contexts/AuthContext';
-import { getAuthorVideos } from '../../api/video';
-import { getUserStats } from '../../api/user';
+import { getAuthorVideos, getLikedVideos } from '../../api/video';
+import { getUserStats, getUser } from '../../api/user';
 import { ProfileSkeleton } from '../Common/Skeleton';
-import { Lock, Menu, Copy, Play } from 'lucide-react';
+import { Menu, Copy, Play, ArrowLeft } from 'lucide-react';
 import { getCoverUrl } from '../../utils/media';
 import avatarImg from '../../resource/avatar.jpg';
 
-const VideoGridItem = ({ video }) => {
+const VideoGridItem = ({ video, onClick }) => {
     const [imgError, setImgError] = useState(false);
 
     return (
-        <div className="aspect-[3/4] bg-gray-900 relative cursor-pointer group">
+        <div
+            className="aspect-[3/4] bg-gray-900 relative cursor-pointer group"
+            onClick={() => onClick && onClick(video)}
+        >
             {!imgError ? (
                 <img
                     src={getCoverUrl(video.coverUrl)}
@@ -35,22 +39,61 @@ const VideoGridItem = ({ video }) => {
 };
 
 const ProfilePage = () => {
+    const navigate = useNavigate();
+    const { id: routeUserId } = useParams();
     const { user, token, handleLogout } = useAuthContext();
+    const [profileUser, setProfileUser] = useState(null);
     const [videos, setVideos] = useState([]);
+    const [likedVideos, setLikedVideos] = useState([]);
     const [stats, setStats] = useState({ totalLikes: 0, workCount: 0, followingCount: 0, followerCount: 0 });
     const [loading, setLoading] = useState(true);
+    const [likedLoading, setLikedLoading] = useState(false);
     const [page, setPage] = useState(1);
+    const [likedPage, setLikedPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
+    const [hasMoreLiked, setHasMoreLiked] = useState(true);
     const [activeTab, setActiveTab] = useState('works'); // works, likes, private
+    const [likedFetched, setLikedFetched] = useState(false);
     const observer = useRef();
     const loadingRef = useRef(false);
+    const likedLoadingRef = useRef(false);
+
+    // Determine which user's profile to show
+    const isOwnProfile = !routeUserId || (user && String(routeUserId) === String(user.userId));
+    const targetUserId = routeUserId || user?.userId;
+
+    // Fetch the profile user's info when viewing another user's profile
+    useEffect(() => {
+        if (isOwnProfile) {
+            setProfileUser(user);
+        } else if (targetUserId && token) {
+            getUser(token, targetUserId)
+                .then(data => setProfileUser(data))
+                .catch(err => {
+                    console.error("Failed to fetch profile user:", err);
+                    setProfileUser(null);
+                });
+        }
+    }, [isOwnProfile, targetUserId, user, token]);
+
+    // Reset state when target user changes
+    useEffect(() => {
+        setVideos([]);
+        setLikedVideos([]);
+        setPage(1);
+        setLikedPage(1);
+        setHasMore(true);
+        setHasMoreLiked(true);
+        setLikedFetched(false);
+        setStats({ totalLikes: 0, workCount: 0, followingCount: 0, followerCount: 0 });
+    }, [targetUserId]);
 
     const fetchVideos = async (pageNum) => {
-        if (!user?.userId || loadingRef.current) return;
+        if (!targetUserId || loadingRef.current) return;
         loadingRef.current = true;
         try {
             setLoading(true);
-            const data = await getAuthorVideos(token, user.userId, pageNum, 18);
+            const data = await getAuthorVideos(token, targetUserId, pageNum, 18);
             if (data.records && data.records.length > 0) {
                 setVideos(prev => pageNum === 1 ? data.records : [...prev, ...data.records]);
                 setHasMore(data.records.length === 18);
@@ -66,22 +109,51 @@ const ProfilePage = () => {
     };
 
     const fetchStats = async () => {
-        if (!user?.userId) return;
+        if (!targetUserId) return;
         try {
-            const statsData = await getUserStats(token, user.userId);
+            const statsData = await getUserStats(token, targetUserId);
             setStats(statsData);
         } catch (err) {
             console.error("Failed to fetch stats", err);
         }
     };
 
+    const fetchLikedVideos = async (pageNum) => {
+        if (!targetUserId || likedLoadingRef.current) return;
+        likedLoadingRef.current = true;
+        try {
+            setLikedLoading(true);
+            const data = await getLikedVideos(token, targetUserId, pageNum, 18);
+            if (data.records && data.records.length > 0) {
+                setLikedVideos(prev => pageNum === 1 ? data.records : [...prev, ...data.records]);
+                setHasMoreLiked(data.records.length === 18);
+            } else {
+                if (pageNum === 1) setLikedVideos([]);
+                setHasMoreLiked(false);
+            }
+        } catch (err) {
+            console.error("Failed to fetch liked videos", err);
+        } finally {
+            setLikedLoading(false);
+            likedLoadingRef.current = false;
+        }
+    };
+
     useEffect(() => {
-        if (user) {
+        if (targetUserId && token) {
             fetchVideos(1);
             fetchStats();
             setPage(1);
         }
-    }, [user, token]);
+    }, [targetUserId, token]);
+
+    // Fetch liked videos when switching to the likes tab
+    useEffect(() => {
+        if (activeTab === 'likes' && !likedFetched && targetUserId && token) {
+            setLikedFetched(true);
+            fetchLikedVideos(1);
+        }
+    }, [activeTab, likedFetched, targetUserId, token]);
 
     const lastVideoRef = useCallback(node => {
         if (loading) return;
@@ -103,14 +175,27 @@ const ProfilePage = () => {
     }
     if (loading && videos.length === 0) return <ProfileSkeleton />;
 
+    const displayUser = profileUser || user;
+
     return (
         <div className="h-screen bg-black text-white pb-20 overflow-y-auto custom-scrollbar">
             {/* Header / Banner */}
             <div className="relative h-32 bg-gray-800">
                 {/* Optional: User Cover Image */}
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60"></div>
+                <div className="absolute top-4 left-4 z-10">
+                    {!isOwnProfile && (
+                        <ArrowLeft
+                            className="text-white drop-shadow-md cursor-pointer"
+                            size={24}
+                            onClick={() => navigate(-1)}
+                        />
+                    )}
+                </div>
                 <div className="absolute top-4 right-4 flex space-x-4 z-10">
-                    <Menu className="text-white drop-shadow-md" size={24} onClick={handleLogout} />
+                    {isOwnProfile && (
+                        <Menu className="text-white drop-shadow-md cursor-pointer" size={24} onClick={handleLogout} />
+                    )}
                 </div>
             </div>
 
@@ -124,9 +209,9 @@ const ProfilePage = () => {
                             className="w-full h-full object-cover"
                         />
                     </div >
-                    <h1 className="text-xl font-bold mb-1">@{user.nickname || user.username}</h1>
+                    <h1 className="text-xl font-bold mb-1">@{displayUser.nickname || displayUser.username}</h1>
                     <div className="flex items-center text-xs text-gray-400 mb-4 space-x-2">
-                        <span>抖音号：{user.userId}</span>
+                        <span>抖音号：{displayUser.userId}</span>
                         <Copy size={12} className="cursor-pointer" />
                     </div>
                 </div >
@@ -147,12 +232,21 @@ const ProfilePage = () => {
                 </div>
 
                 <p className="text-sm text-gray-300 mb-6 leading-relaxed">
-                    {user.bio || '点击添加个人简介...'}
+                    {displayUser.bio || (isOwnProfile ? '点击添加个人简介...' : '暂无个人简介')}
                 </p>
 
                 <div className="flex space-x-2 mb-8">
-                    <button className="flex-1 bg-gray-800 py-2 rounded-[4px] text-sm font-medium hover:bg-gray-700 transition">编辑资料</button>
-                    <button className="flex-1 bg-gray-800 py-2 rounded-[4px] text-sm font-medium hover:bg-gray-700 transition">添加朋友</button>
+                    {isOwnProfile ? (
+                        <>
+                            <button className="flex-1 bg-gray-800 py-2 rounded-[4px] text-sm font-medium hover:bg-gray-700 transition">编辑资料</button>
+                            <button className="flex-1 bg-gray-800 py-2 rounded-[4px] text-sm font-medium hover:bg-gray-700 transition">添加朋友</button>
+                        </>
+                    ) : (
+                        <>
+                            <button className="flex-1 bg-[#fe2c55] py-2 rounded-[4px] text-sm font-medium hover:bg-[#ef2950] transition">关注</button>
+                            <button className="flex-1 bg-gray-800 py-2 rounded-[4px] text-sm font-medium hover:bg-gray-700 transition">私信</button>
+                        </>
+                    )}
                 </div>
             </div >
 
@@ -164,16 +258,6 @@ const ProfilePage = () => {
                 >
                     作品 {stats.workCount > 0 ? stats.workCount : (videos.length > 0 ? videos.length : '')}
                     {activeTab === 'works' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-yellow-400 rounded-full"></div>}
-                </button>
-                <button
-                    onClick={() => setActiveTab('private')}
-                    className={`pb-3 text-sm font-medium relative ${activeTab === 'private' ? 'text-white' : 'text-gray-500'}`}
-                >
-                    <div className="flex items-center space-x-1">
-                        <Lock size={14} />
-                        <span>私密</span>
-                    </div>
-                    {activeTab === 'private' && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-yellow-400 rounded-full"></div>}
                 </button>
                 <button
                     onClick={() => setActiveTab('likes')}
@@ -190,7 +274,7 @@ const ProfilePage = () => {
                     videos.length > 0 ? (
                         videos.map((video, index) => (
                             <div key={video.id} ref={index === videos.length - 1 ? lastVideoRef : null}>
-                                <VideoGridItem video={video} />
+                                <VideoGridItem video={video} onClick={(v) => navigate(`/video/${v.id}`)} />
                             </div>
                         ))
                     ) : (
@@ -198,12 +282,29 @@ const ProfilePage = () => {
                             暂时没有作品
                         </div>
                     )
-                ) : (
-                    <div className="col-span-3 py-20 text-center text-gray-500 text-sm">
-                        {activeTab === 'private' ? '私密视频仅自己可见' : '喜欢的视频仅自己可见'}
+                ) : activeTab === 'likes' ? (
+                    likedLoading && likedVideos.length === 0 ? (
+                        <div className="col-span-3 py-20 text-center text-gray-500 text-sm">
+                            加载中...
+                        </div>
+                    ) : likedVideos.length > 0 ? (
+                        likedVideos.map((video) => (
+                            <div key={video.id}>
+                                <VideoGridItem video={video} onClick={(v) => navigate(`/video/${v.id}`)} />
+                            </div>
+                        ))
+                    ) : (
+                        <div className="col-span-3 py-20 text-center text-gray-500 text-sm">
+                            暂时没有喜欢的视频
+                        </div>
+                    )
+                ) : null}
+                {loading && videos.length > 0 && activeTab === 'works' && (
+                    <div className="col-span-3 py-4 text-center text-gray-500 text-xs">
+                        加载中...
                     </div>
                 )}
-                {loading && videos.length > 0 && (
+                {likedLoading && likedVideos.length > 0 && activeTab === 'likes' && (
                     <div className="col-span-3 py-4 text-center text-gray-500 text-xs">
                         加载中...
                     </div>

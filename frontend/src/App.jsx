@@ -84,6 +84,18 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/user/:id"
+          element={
+            <ProtectedRoute>
+              <>
+                <ProfilePage />
+                <BottomNavigation onUpload={() => setIsUploadOpen(true)} />
+                <UploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
+              </>
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
