@@ -3,11 +3,12 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { getAuthorVideos, getLikedVideos } from '../../api/video';
-import { getUserStats, getUser } from '../../api/user';
+import { followUser, getFollowStatus, getUserStats, getUser, unfollowUser } from '../../api/user';
 import { ProfileSkeleton } from '../Common/Skeleton';
-import { Menu, Copy, Play, ArrowLeft } from 'lucide-react';
+import { Menu, Copy, Play, ArrowLeft, Heart } from 'lucide-react';
 import { getCoverUrl } from '../../utils/media';
 import avatarImg from '../../resource/avatar.jpg';
+import UserListModal from './UserListModal';
 
 const VideoGridItem = ({ video, onClick }) => {
     const [imgError, setImgError] = useState(false);
@@ -34,6 +35,10 @@ const VideoGridItem = ({ video, onClick }) => {
                 <span className="mr-1"><Play size={10} fill="currentColor" /></span>
                 {video.viewCount || 0}
             </div>
+            <div className="absolute bottom-1 right-1 flex items-center text-xs text-white drop-shadow-md font-medium">
+                <span className="mr-1"><Heart size={10} fill="currentColor" /></span>
+                {video.likeCount || 0}
+            </div>
         </div>
     );
 };
@@ -54,6 +59,9 @@ const ProfilePage = () => {
     const [hasMoreLiked, setHasMoreLiked] = useState(true);
     const [activeTab, setActiveTab] = useState('works'); // works, likes, private
     const [likedFetched, setLikedFetched] = useState(false);
+    const [following, setFollowing] = useState(false);
+    const [followSaving, setFollowSaving] = useState(false);
+    const [showListModal, setShowListModal] = useState(null); // 'following' | 'followers' | null
     const observer = useRef();
     const loadingRef = useRef(false);
     const likedLoadingRef = useRef(false);
@@ -85,6 +93,7 @@ const ProfilePage = () => {
         setHasMore(true);
         setHasMoreLiked(true);
         setLikedFetched(false);
+        setFollowing(false);
         setStats({ totalLikes: 0, workCount: 0, followingCount: 0, followerCount: 0 });
     }, [targetUserId]);
 
@@ -146,6 +155,53 @@ const ProfilePage = () => {
             setPage(1);
         }
     }, [targetUserId, token]);
+
+    useEffect(() => {
+        if (!isOwnProfile && targetUserId && token) {
+            getFollowStatus(token, targetUserId)
+                .then(data => {
+                    setFollowing(!!data.following);
+                    setStats(prev => ({
+                        ...prev,
+                        followingCount: data.followingCount ?? prev.followingCount,
+                        followerCount: data.followerCount ?? prev.followerCount
+                    }));
+                })
+                .catch(err => console.error('Failed to fetch follow status:', err));
+        }
+    }, [isOwnProfile, targetUserId, token]);
+
+    const handleFollowToggle = async () => {
+        if (!targetUserId || followSaving) return;
+        const nextFollowing = !following;
+        setFollowSaving(true);
+        setFollowing(nextFollowing);
+        setStats(prev => ({
+            ...prev,
+            followerCount: Math.max(0, (prev.followerCount || 0) + (nextFollowing ? 1 : -1))
+        }));
+
+        try {
+            const data = nextFollowing
+                ? await followUser(token, targetUserId)
+                : await unfollowUser(token, targetUserId);
+            setFollowing(!!data.following);
+            setStats(prev => ({
+                ...prev,
+                followingCount: data.followingCount ?? prev.followingCount,
+                followerCount: data.followerCount ?? prev.followerCount
+            }));
+        } catch (err) {
+            setFollowing(!nextFollowing);
+            setStats(prev => ({
+                ...prev,
+                followerCount: Math.max(0, (prev.followerCount || 0) + (nextFollowing ? -1 : 1))
+            }));
+            alert(err.message || '操作失败');
+        } finally {
+            setFollowSaving(false);
+        }
+    };
 
     // Fetch liked videos when switching to the likes tab
     useEffect(() => {
@@ -221,11 +277,11 @@ const ProfilePage = () => {
                         <span className="font-bold text-white">{stats.totalLikes}</span>
                         <span className="text-gray-400">获赞</span>
                     </div>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1 cursor-pointer hover:opacity-80" onClick={() => setShowListModal('following')}>
                         <span className="font-bold text-white">{stats.followingCount}</span>
                         <span className="text-gray-400">关注</span>
                     </div>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1 cursor-pointer hover:opacity-80" onClick={() => setShowListModal('followers')}>
                         <span className="font-bold text-white">{stats.followerCount}</span>
                         <span className="text-gray-400">粉丝</span>
                     </div>
@@ -242,10 +298,13 @@ const ProfilePage = () => {
                             <button className="flex-1 bg-gray-800 py-2 rounded-[4px] text-sm font-medium hover:bg-gray-700 transition">添加朋友</button>
                         </>
                     ) : (
-                        <>
-                            <button className="flex-1 bg-[#fe2c55] py-2 rounded-[4px] text-sm font-medium hover:bg-[#ef2950] transition">关注</button>
-                            <button className="flex-1 bg-gray-800 py-2 rounded-[4px] text-sm font-medium hover:bg-gray-700 transition">私信</button>
-                        </>
+                        <button
+                            onClick={handleFollowToggle}
+                            disabled={followSaving}
+                            className={`flex-1 py-2 rounded-[4px] text-sm font-medium transition disabled:opacity-60 ${following ? 'bg-gray-800 hover:bg-gray-700' : 'bg-[#fe2c55] hover:bg-[#ef2950]'}`}
+                        >
+                            {following ? '已关注' : '关注'}
+                        </button>
                     )}
                 </div>
             </div >
@@ -310,6 +369,19 @@ const ProfilePage = () => {
                     </div>
                 )}
             </div>
+            <UserListModal
+                isOpen={showListModal !== null}
+                onClose={() => setShowListModal(null)}
+                type={showListModal}
+                userId={targetUserId}
+                token={token}
+                onUnfollowSuccess={() => {
+                    setStats(prev => ({
+                        ...prev,
+                        followingCount: Math.max(0, (prev.followingCount || 0) - 1)
+                    }));
+                }}
+            />
         </div >
     );
 };

@@ -25,6 +25,7 @@ export default {
         'glow': 'glow 2s ease-in-out infinite alternate',
         'modal-pop': 'modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
         'backdrop-fade': 'backdropFade 0.3s ease-out forwards',
+        'slide-in-right': 'slideInRight 0.3s ease-out forwards',
       },
       keyframes: {
         floatPulse: {
@@ -44,6 +45,10 @@ export default {
         backdropFade: {
           '0%': { opacity: '0', backdropFilter: 'blur(0px)' },
           '100%': { opacity: '1', backdropFilter: 'blur(8px)' },
+        },
+        slideInRight: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
         },
       },
     },

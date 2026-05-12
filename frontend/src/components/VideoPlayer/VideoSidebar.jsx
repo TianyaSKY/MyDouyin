@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, Plus, Maximize2, Minimize2, Trash2, Share2, MessageCircle } from 'lucide-react';
 import { likeVideo, unlikeVideo, getVideoLikeStatus, deleteVideo, getShareCount, shareVideo } from '../../api/video';
 import { getCommentCount } from '../../api/comment';
+import { followUser, getFollowStatus, unfollowUser } from '../../api/user';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import ConfirmDialog from '../Common/ConfirmDialog';
@@ -18,6 +19,8 @@ const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete, onOpenC
 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showShare, setShowShare] = useState(false);
+    const [following, setFollowing] = useState(false);
+    const [followSaving, setFollowSaving] = useState(false);
 
     const [commentCount, setCommentCount] = useState(0);
     const [shareCount, setShareCount] = useState(0);
@@ -41,6 +44,16 @@ const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete, onOpenC
                 });
         }
     }, [isActive, video?.id, token]);
+
+    useEffect(() => {
+        if (isActive && video?.authorId && user?.userId !== video.authorId) {
+            getFollowStatus(token, video.authorId)
+                .then(data => setFollowing(!!data.following))
+                .catch(err => console.error('Failed to fetch follow status:', err));
+        } else {
+            setFollowing(false);
+        }
+    }, [isActive, video?.authorId, token, user?.userId]);
 
     // Fetch comment count when active
     useEffect(() => {
@@ -83,6 +96,27 @@ const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete, onOpenC
         setShowDeleteConfirm(true);
     };
 
+    const handleFollowClick = async (e) => {
+        e.stopPropagation();
+        if (!video?.authorId || followSaving || user?.userId === video.authorId) return;
+
+        const nextFollowing = !following;
+        setFollowSaving(true);
+        setFollowing(nextFollowing);
+
+        try {
+            const data = nextFollowing
+                ? await followUser(token, video.authorId)
+                : await unfollowUser(token, video.authorId);
+            setFollowing(!!data.following);
+        } catch (error) {
+            console.error('Follow operation failed:', error);
+            setFollowing(!nextFollowing);
+        } finally {
+            setFollowSaving(false);
+        }
+    };
+
     const handleConfirmDelete = async () => {
         try {
             await deleteVideo(token, video.id);
@@ -118,9 +152,11 @@ const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete, onOpenC
                     />
                 </div>
                 {/* Follow Button */}
-                <div className="dy-sidebar-follow">
-                    <Plus size={12} strokeWidth={3} />
-                </div>
+                {user?.userId !== video.authorId && !following && (
+                    <div className="dy-sidebar-follow" onClick={handleFollowClick}>
+                        <Plus size={12} strokeWidth={3} />
+                    </div>
+                )}
             </div>
 
             {/* Like */}

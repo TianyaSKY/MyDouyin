@@ -121,6 +121,20 @@ CREATE TABLE IF NOT EXISTS user_comment_preferences (
     INDEX idx_user_video (user_id, video_id)
 ) COMMENT '用户评论偏好表(推荐系统回写)';
 
+-- 10. User Follows
+CREATE TABLE IF NOT EXISTS user_follows (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    follower_id BIGINT NOT NULL COMMENT '关注者ID',
+    following_id BIGINT NOT NULL COMMENT '被关注者ID',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态(1:生效, 0:取消)',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY uk_user_follow (follower_id, following_id),
+    INDEX idx_follower_status (follower_id, status),
+    INDEX idx_following_status (following_id, status),
+    INDEX idx_updated_at (updated_at)
+) COMMENT '用户关注关系表';
+
 -- 插入数据
 -- 插入管理员用户 密码在此项目的默认密钥hash 登录使用admin123
 
