@@ -65,8 +65,9 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
         long like = eventType == EventType.LIKE ? 1 : 0;
         long finish = eventType == EventType.FINISH ? 1 : 0;
         long share = eventType == EventType.SHARE ? 1 : 0;
+        long comment = eventType == EventType.COMMENT ? 1 : 0;
 
-        baseMapper.upsertStats(videoId, today, impr, click, like, finish, share, watchMs);
+        baseMapper.upsertStats(videoId, today, impr, click, like, finish, share, comment, watchMs);
     }
 
     @Override

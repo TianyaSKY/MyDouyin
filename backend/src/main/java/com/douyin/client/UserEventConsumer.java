@@ -63,6 +63,7 @@ public class UserEventConsumer {
         return eventType == EventType.CLICK 
             || eventType == EventType.LIKE 
             || eventType == EventType.FINISH 
-            || eventType == EventType.SHARE;
+            || eventType == EventType.SHARE
+            || eventType == EventType.COMMENT;
     }
 }

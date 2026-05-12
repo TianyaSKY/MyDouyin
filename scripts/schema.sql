@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS video_daily_stats (
     like_cnt INT DEFAULT 0 COMMENT '点赞次数',
     finish_cnt INT DEFAULT 0 COMMENT '完播次数',
     share_cnt INT DEFAULT 0 COMMENT '分享次数',
+    comment_cnt INT DEFAULT 0 COMMENT '评论次数',
     watch_time_sum BIGINT DEFAULT 0 COMMENT '总观看时长(毫秒)',
     PRIMARY KEY (video_id, date)
 ) COMMENT '视频每日统计表';
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS user_events (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
     video_id BIGINT NOT NULL COMMENT '视频ID',
-    event_type ENUM('impr', 'click', 'like', 'finish', 'share', 'leave') NOT NULL COMMENT '事件类型(曝光, 点击, 点赞, 完播, 分享, 离开)',
+    event_type ENUM('impr', 'click', 'like', 'finish', 'share', 'leave', 'comment') NOT NULL COMMENT '事件类型(曝光, 点击, 点赞, 完播, 分享, 离开, 评论)',
     watch_ms INT DEFAULT 0 COMMENT '观看时长(毫秒)',
     ctx JSON NULL COMMENT '上下文信息(设备, 入口, 时间戳等)',
     ts DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '事件发生时间',
@@ -93,10 +94,37 @@ CREATE TABLE IF NOT EXISTS media_files (
     UNIQUE KEY uk_file_hash (file_hash)
 ) COMMENT '媒体文件登记表(用于秒传)';
 
+-- 8. Video Comments
+CREATE TABLE IF NOT EXISTS video_comments (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '评论ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    video_id BIGINT NOT NULL COMMENT '视频ID',
+    content VARCHAR(500) NOT NULL COMMENT '评论内容',
+    parent_id BIGINT NULL DEFAULT NULL COMMENT '父评论ID(回复)',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态(1:正常, 0:已删除)',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_video_id (video_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_parent_id (parent_id),
+    INDEX idx_created_at (created_at)
+) COMMENT '视频评论表';
+
+-- 9. User Comment Preferences (recommend writes back)
+CREATE TABLE IF NOT EXISTS user_comment_preferences (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    video_id BIGINT NOT NULL COMMENT '视频ID',
+    comment_id BIGINT NOT NULL COMMENT '评论ID',
+    preference_score DOUBLE NOT NULL DEFAULT 0.0 COMMENT '喜好程度(0-1)',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    UNIQUE KEY uk_comment (user_id, video_id, comment_id),
+    INDEX idx_user_video (user_id, video_id)
+) COMMENT '用户评论偏好表(推荐系统回写)';
+
 -- 插入数据
 -- 插入管理员用户 密码在此项目的默认密钥hash 登录使用admin123
 
-INSERT INTO Users(user_id,username,password,nickname,is_admin)
+INSERT IGNORE INTO users(user_id,username,password,nickname,is_admin)
 VALUES
 (1,'default_admin','$2a$10$NWTWuFxkkuKkuSDADiuCDeBsr0NKol9XCMjwsD8rNatW3y09hPcnG','默认管理员',1),
-(2,'default_user','$2a$10$NWTWuFxkkuKkuSDADiuCDeBsr0NKol9XCMjwsD8rNatW3y09hPcnG','默认用户',0),
+(2,'default_user','$2a$10$NWTWuFxkkuKkuSDADiuCDeBsr0NKol9XCMjwsD8rNatW3y09hPcnG','默认用户',0);

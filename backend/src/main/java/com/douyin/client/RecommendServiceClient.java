@@ -22,7 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class RecommendServiceClient {
 
-    @Value("${recommend.service.url:http://localhost:18101}")
+    @Value("${recommend.service.url:http://localhost:8082}")
     private String recommendServiceUrl;
 
     private final RestTemplate restTemplate;
@@ -40,30 +40,30 @@ public class RecommendServiceClient {
     ) {
         try {
             String url = recommendServiceUrl + "/api/embedding/video";
-            
+
             Map<String, Object> request = new HashMap<>();
             request.put("video_id", videoId);
             request.put("title", title);
             request.put("tags", tags);
             request.put("cover_url", coverUrl);
             request.put("video_url", videoUrl);
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-            
+
             ResponseEntity<VideoEmbeddingResponse> response = restTemplate.postForEntity(
                 url, entity, VideoEmbeddingResponse.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 log.info("Generated video embedding for video {}", videoId);
                 return response.getBody().getEmbedding();
             }
-            
+
             log.warn("Failed to generate video embedding for video {}", videoId);
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error calling recommend service for video embedding", e);
             return null;
@@ -76,26 +76,26 @@ public class RecommendServiceClient {
     public Map<Long, List<Float>> generateVideoEmbeddingsBatch(List<Long> videoIds) {
         try {
             String url = recommendServiceUrl + "/api/embedding/video/batch";
-            
+
             Map<String, Object> request = new HashMap<>();
             request.put("video_ids", videoIds);
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-            
+
             ResponseEntity<BatchVideoEmbeddingResponse> response = restTemplate.postForEntity(
                 url, entity, BatchVideoEmbeddingResponse.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 log.info("Generated batch video embeddings for {} videos", videoIds.size());
                 return response.getBody().getEmbeddings();
             }
-            
+
             log.warn("Failed to generate batch video embeddings");
             return new HashMap<>();
-            
+
         } catch (Exception e) {
             log.error("Error calling recommend service for batch video embeddings", e);
             return new HashMap<>();
@@ -177,27 +177,27 @@ public class RecommendServiceClient {
     public List<Float> calculateUserEmbedding(Long userId, List<Map<String, Object>> recentEvents) {
         try {
             String url = recommendServiceUrl + "/api/embedding/user";
-            
+
             Map<String, Object> request = new HashMap<>();
             request.put("user_id", userId);
             request.put("recent_events", recentEvents);
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-            
+
             ResponseEntity<UserEmbeddingResponse> response = restTemplate.postForEntity(
                 url, entity, UserEmbeddingResponse.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 log.info("Calculated user embedding for user {}", userId);
                 return response.getBody().getEmbedding();
             }
-            
+
             log.warn("Failed to calculate user embedding for user {}", userId);
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error calling recommend service for user embedding", e);
             return null;
@@ -207,33 +207,33 @@ public class RecommendServiceClient {
     /**
      * 精排服务
      */
-    public List<RankedVideo> rankVideos(Long userId, List<Float> userEmbedding, 
+    public List<RankedVideo> rankVideos(Long userId, List<Float> userEmbedding,
                                         List<Map<String, Object>> candidates, int topK) {
         try {
             String url = recommendServiceUrl + "/api/rank";
-            
+
             Map<String, Object> request = new HashMap<>();
             request.put("user_id", userId);
             request.put("user_embedding", userEmbedding);
             request.put("candidates", candidates);
             request.put("top_k", topK);
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-            
+
             ResponseEntity<RankResponse> response = restTemplate.postForEntity(
                 url, entity, RankResponse.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 log.info("Ranked {} videos for user {}", candidates.size(), userId);
                 return response.getBody().getRankedVideos();
             }
-            
+
             log.warn("Failed to rank videos for user {}", userId);
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error calling recommend service for ranking", e);
             return null;
@@ -246,19 +246,19 @@ public class RecommendServiceClient {
     public List<Float> getUserLongTermVector(Long userId) {
         try {
             String url = recommendServiceUrl + "/api/user/vector/long-term/" + userId;
-            
+
             ResponseEntity<UserVectorResponse> response = restTemplate.getForEntity(
                 url, UserVectorResponse.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 log.info("Retrieved long-term vector for user {}", userId);
                 return response.getBody().getVector();
             }
-            
+
             log.debug("Long-term vector not found for user {}", userId);
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error getting long-term vector for user {}", userId, e);
             return null;
@@ -299,27 +299,27 @@ public class RecommendServiceClient {
     public boolean updateUserLongTermVector(Long userId, List<Float> vector) {
         try {
             String url = recommendServiceUrl + "/api/user/vector/long-term";
-            
+
             Map<String, Object> request = new HashMap<>();
             request.put("user_id", userId);
             request.put("vector", vector);
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-            
+
             ResponseEntity<Map> response = restTemplate.postForEntity(
                 url, entity, Map.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK) {
                 log.info("Updated long-term vector for user {}", userId);
                 return true;
             }
-            
+
             log.warn("Failed to update long-term vector for user {}", userId);
             return false;
-            
+
         } catch (Exception e) {
             log.error("Error updating long-term vector for user {}", userId, e);
             return false;
@@ -332,28 +332,28 @@ public class RecommendServiceClient {
     public boolean insertUserVector(Long userId, List<Float> longTermVec, List<Float> interestVec) {
         try {
             String url = recommendServiceUrl + "/api/user/vector";
-            
+
             Map<String, Object> request = new HashMap<>();
             request.put("user_id", userId);
             request.put("long_term_vec", longTermVec);
             request.put("interest_vec", interestVec);
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-            
+
             ResponseEntity<Map> response = restTemplate.postForEntity(
                 url, entity, Map.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK) {
                 log.info("Inserted user vector for user {}", userId);
                 return true;
             }
-            
+
             log.warn("Failed to insert user vector for user {}", userId);
             return false;
-            
+
         } catch (Exception e) {
             log.error("Error inserting user vector for user {}", userId, e);
             return false;
@@ -366,28 +366,28 @@ public class RecommendServiceClient {
     public List<Long> vectorRecall(Long userId, List<Float> userVector, int topK) {
         try {
             String url = recommendServiceUrl + "/api/recall/vector";
-            
+
             Map<String, Object> request = new HashMap<>();
             request.put("user_id", userId);
             request.put("user_vector", userVector);
             request.put("top_k", topK);
-            
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-            
+
             ResponseEntity<VectorRecallResponse> response = restTemplate.postForEntity(
                 url, entity, VectorRecallResponse.class
             );
-            
+
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 log.info("Vector recall found {} videos for user {}", response.getBody().getVideoIds().size(), userId);
                 return response.getBody().getVideoIds();
             }
-            
+
             log.warn("Failed to perform vector recall for user {}", userId);
             return null;
-            
+
         } catch (Exception e) {
             log.error("Error performing vector recall for user {}", userId, e);
             return null;
@@ -405,6 +405,43 @@ public class RecommendServiceClient {
         } catch (Exception e) {
             log.error("Recommend service health check failed", e);
             return false;
+        }
+    }
+
+    /**
+     * 计算评论偏好分数
+     */
+    public Double computeCommentPreference(Long userId, Long videoId, Long commentId, String content) {
+        try {
+            String url = recommendServiceUrl + "/api/comment/preference";
+
+            Map<String, Object> request = new HashMap<>();
+            request.put("user_id", userId);
+            request.put("video_id", videoId);
+            request.put("comment_id", commentId);
+            request.put("content", content);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
+            ResponseEntity<CommentPreferenceResponse> response = restTemplate.postForEntity(
+                url, entity, CommentPreferenceResponse.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                log.info("Computed comment preference for userId={}, videoId={}, commentId={}, score={}",
+                        userId, videoId, commentId, response.getBody().getPreferenceScore());
+                return response.getBody().getPreferenceScore();
+            }
+
+            log.warn("Failed to compute comment preference for userId={}, videoId={}", userId, videoId);
+            return null;
+
+        } catch (Exception e) {
+            log.error("Error calling recommend service for comment preference, userId={}, videoId={}",
+                    userId, videoId, e);
+            return null;
         }
     }
 
@@ -460,5 +497,12 @@ public class RecommendServiceClient {
         private List<Long> videoIds;
         private Integer count;
     }
-}
 
+    @Data
+    public static class CommentPreferenceResponse {
+        private Long userId;
+        private Long videoId;
+        private Long commentId;
+        private Double preferenceScore;
+    }
+}

@@ -5,6 +5,9 @@ import VolumeControl from './VolumeControl';
 import { Play } from 'lucide-react';
 import { getMediaUrl } from '../../utils/media';
 import { useAnalytics } from '../../hooks/useAnalytics';
+import { useAuthContext } from '../../contexts/AuthContext';
+import CommentPanel from './CommentPanel';
+import { getCommentCount } from '../../api/comment';
 
 const VideoPlayer = ({ video, isActive, onDelete }) => {
     const videoRef = useRef(null);
@@ -14,6 +17,8 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const { track } = useAnalytics();
+    const { token } = useAuthContext();
+    const [showComments, setShowComments] = useState(false);
 
 
     const watchedMsRef = useRef(0);
@@ -173,8 +178,8 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
                 playsInline
             />
 
-            {/* Volume Control - Top Right */}
-            <VolumeControl videoRef={videoRef} />
+            {/* Volume Control - Top Right (hidden when comments open) */}
+            {!showComments && <VolumeControl videoRef={videoRef} />}
 
             {/* Play/Pause Indicator */}
             {!playing && (
@@ -193,6 +198,13 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
                 fitMode={fitMode}
                 isActive={isActive}
                 onDelete={onDelete}
+                onOpenComments={() => setShowComments(true)}
+            />
+
+            <CommentPanel
+                isOpen={showComments}
+                onClose={() => setShowComments(false)}
+                videoId={video.id}
             />
 
             {/* Bottom Progress Bar — Douyin style */}

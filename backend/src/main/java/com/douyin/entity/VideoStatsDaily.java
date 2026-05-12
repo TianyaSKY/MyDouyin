@@ -27,6 +27,8 @@ public class VideoStatsDaily {
 
     private Long shareCnt;
 
+    private Long commentCnt;
+
     /**
      * Total watch time in milliseconds.
      */

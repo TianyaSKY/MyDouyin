@@ -89,8 +89,8 @@ Douyin/
 项目默认从根目录 `.env` 读取配置。常用变量示例：
 
 ```env
-BACKEND_PORT=18081
-RECOMMEND_PORT=18101
+BACKEND_PORT=8081
+RECOMMEND_PORT=8082
 
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
@@ -111,7 +111,7 @@ MILVUS_HOST=localhost
 MILVUS_PORT=19530
 
 RECOMMEND_HOST=localhost
-RECOMMEND_SERVICE_URL=http://localhost:18101
+RECOMMEND_SERVICE_URL=http://localhost:8082
 
 DASHSCOPE_API_KEY=your_key
 DASHSCOPE_EMBEDDING_URL=your_url
@@ -148,7 +148,7 @@ pip install -r recommend/requirements.txt
 python recommend/main.py
 ```
 
-服务默认地址：`http://localhost:18101`
+服务默认地址：`http://localhost:8082`
 
 ### 3. 启动 backend
 
@@ -156,9 +156,9 @@ python recommend/main.py
 mvn -f backend/pom.xml spring-boot:run
 ```
 
-服务默认地址：`http://localhost:18081`
+服务默认地址：`http://localhost:8081`
 
-Swagger：`http://localhost:18081/swagger-ui/index.html`
+Swagger：`http://localhost:8081/swagger-ui/index.html`
 
 ### 4. 启动 frontend
 

@@ -11,7 +11,7 @@ public class MediaUrlResolver {
 
     private static final String UPLOADS_PREFIX = "/uploads/";
 
-    @Value("${app.media-base-url:http://localhost:18081}")
+    @Value("${app.media-base-url:http://localhost:8081}")
     private String mediaBaseUrl;
 
     public String normalizeForStorage(String url) {

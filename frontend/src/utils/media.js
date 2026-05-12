@@ -1,5 +1,5 @@
 
-const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "18081";
+const BACKEND_PORT = import.meta.env.VITE_BACKEND_PORT || "8081";
 const MEDIA_BASE_URL =
     import.meta.env.VITE_MEDIA_BASE_URL || `http://localhost:${BACKEND_PORT}`;
 

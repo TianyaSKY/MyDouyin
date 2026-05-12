@@ -16,7 +16,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Backend API base URL (10.0.2.2 = host loopback for emulator)
-        buildConfigField("String", "BASE_URL", "\"http://192.168.1.109:18081\"")
+        buildConfigField("String", "BASE_URL", "\"http://192.168.1.109:8081\"")
     }
 
     buildTypes {

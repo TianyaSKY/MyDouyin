@@ -65,6 +65,15 @@ export async function getVideoLikeStatus(token, videoId) {
   return json.data;
 }
 
+export async function getVideoById(token, videoId) {
+  const resp = await apiFetch(`/api/videos/${videoId}`, token);
+  const json = await resp.json();
+  if (json.code !== 200) {
+    throw new Error(json.message || '获取视频失败');
+  }
+  return json.data;
+}
+
 export async function deleteVideo(token, videoId) {
   const resp = await apiFetch(`/api/videos/${videoId}`, token, {
     method: 'DELETE'
@@ -72,6 +81,27 @@ export async function deleteVideo(token, videoId) {
   const json = await resp.json();
   if (json.code !== 200) {
     throw new Error(json.message || '删除视频失败');
+  }
+  return json.data;
+}
+
+export async function getShareCount(token, videoId) {
+  const resp = await apiFetch(`/api/videos/${videoId}/share`, token);
+  const json = await resp.json();
+  if (json.code !== 200) {
+    throw new Error(json.message || '获取分享数失败');
+  }
+  return json.data;
+}
+
+export async function shareVideo(token, videoId, channel) {
+  const resp = await apiFetch(`/api/videos/${videoId}/share`, token, {
+    method: 'POST',
+    body: JSON.stringify({ channel })
+  });
+  const json = await resp.json();
+  if (json.code !== 200) {
+    throw new Error(json.message || '分享失败');
   }
   return json.data;
 }

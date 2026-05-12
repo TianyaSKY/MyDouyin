@@ -16,14 +16,15 @@ public interface VideoStatsDailyMapper extends BaseMapper<VideoStatsDaily> {
     /**
      * Atomic Upsert (MySQL Specific)
      */
-    @Update("INSERT INTO video_daily_stats (video_id, date, impr_cnt, click_cnt, like_cnt, finish_cnt, share_cnt, watch_time_sum) " +
-            "VALUES (#{videoId}, #{date}, #{impr}, #{click}, #{like}, #{finish}, #{share}, #{watchMs}) " +
+    @Update("INSERT INTO video_daily_stats (video_id, date, impr_cnt, click_cnt, like_cnt, finish_cnt, share_cnt, comment_cnt, watch_time_sum) " +
+            "VALUES (#{videoId}, #{date}, #{impr}, #{click}, #{like}, #{finish}, #{share}, #{comment}, #{watchMs}) " +
             "ON DUPLICATE KEY UPDATE " +
             "impr_cnt = impr_cnt + #{impr}, " +
             "click_cnt = click_cnt + #{click}, " +
             "like_cnt = like_cnt + #{like}, " +
             "finish_cnt = finish_cnt + #{finish}, " +
             "share_cnt = share_cnt + #{share}, " +
+            "comment_cnt = comment_cnt + #{comment}, " +
             "watch_time_sum = watch_time_sum + #{watchMs}")
     void upsertStats(@Param("videoId") Long videoId,
                      @Param("date") LocalDate date,
@@ -32,6 +33,7 @@ public interface VideoStatsDailyMapper extends BaseMapper<VideoStatsDaily> {
                      @Param("like") long like,
                      @Param("finish") long finish,
                      @Param("share") long share,
+                     @Param("comment") long comment,
                      @Param("watchMs") long watchMs);
 
     /**
@@ -55,7 +57,8 @@ public interface VideoStatsDailyMapper extends BaseMapper<VideoStatsDaily> {
     /**
      * Sum total stats for a specific video.
      */
-    @Select("SELECT COALESCE(SUM(impr_cnt), 0) as imprCnt, COALESCE(SUM(like_cnt), 0) as likeCnt " +
+    @Select("SELECT COALESCE(SUM(impr_cnt), 0) as imprCnt, COALESCE(SUM(like_cnt), 0) as likeCnt, " +
+            "COALESCE(SUM(share_cnt), 0) as shareCnt " +
             "FROM video_daily_stats WHERE video_id = #{videoId}")
     VideoStatsDaily sumStatsByVideoId(@Param("videoId") Long videoId);
 

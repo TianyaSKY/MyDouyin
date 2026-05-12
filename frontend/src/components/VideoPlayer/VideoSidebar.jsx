@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Plus, Maximize2, Minimize2, Trash2 } from 'lucide-react';
-import { likeVideo, unlikeVideo, getVideoLikeStatus, deleteVideo } from '../../api/video';
+import { Heart, Plus, Maximize2, Minimize2, Trash2, Share2, MessageCircle } from 'lucide-react';
+import { likeVideo, unlikeVideo, getVideoLikeStatus, deleteVideo, getShareCount, shareVideo } from '../../api/video';
+import { getCommentCount } from '../../api/comment';
 import { useAuthContext } from '../../contexts/AuthContext';
 import { useAnalytics } from '../../hooks/useAnalytics';
 import ConfirmDialog from '../Common/ConfirmDialog';
+import SharePanel from '../Common/SharePanel';
 import avatarImg from '../../resource/avatar.jpg';
 
-const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete }) => {
+const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete, onOpenComments }) => {
     const { token, user } = useAuthContext();
     const { track } = useAnalytics();
     const [liked, setLiked] = useState(video.isLiked || false); // Default from prop
     const [likeCount, setLikeCount] = useState(video.likeCount || 0);
 
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showShare, setShowShare] = useState(false);
+
+    const [commentCount, setCommentCount] = useState(0);
+    const [shareCount, setShareCount] = useState(0);
 
     // Sync with props
     useEffect(() => {
@@ -31,6 +37,24 @@ const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete }) => {
                 .catch(err => {
                     console.error("Failed to fetch like status:", err);
                 });
+        }
+    }, [isActive, video?.id, token]);
+
+    // Fetch comment count when active
+    useEffect(() => {
+        if (isActive && video?.id) {
+            getCommentCount(token, video.id)
+                .then(count => setCommentCount(count || 0))
+                .catch(err => console.error('Failed to fetch comment count:', err));
+        }
+    }, [isActive, video?.id, token]);
+
+    // Fetch share count when active
+    useEffect(() => {
+        if (isActive && video?.id) {
+            getShareCount(token, video.id)
+                .then(data => setShareCount(data?.shareCount || 0))
+                .catch(err => console.error('Failed to fetch share count:', err));
         }
     }, [isActive, video?.id, token]);
 
@@ -107,6 +131,22 @@ const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete }) => {
                 <span className="dy-sidebar-count">{formatCount(likeCount)}</span>
             </div>
 
+            {/* Comment */}
+            <div className="dy-sidebar-btn" onClick={onOpenComments}>
+                <div className="dy-sidebar-icon">
+                    <MessageCircle size={26} strokeWidth={2.2} />
+                </div>
+                <span className="dy-sidebar-count">{formatCount(commentCount)}</span>
+            </div>
+
+            {/* Share */}
+            <div className="dy-sidebar-btn" onClick={() => setShowShare(true)}>
+                <div className="dy-sidebar-icon">
+                    <Share2 size={26} strokeWidth={2.2} />
+                </div>
+                <span className="dy-sidebar-count">{shareCount > 0 ? formatCount(shareCount) : '分享'}</span>
+            </div>
+
             {/* Aspect Ratio Toggle */}
             <div className="dy-sidebar-btn" onClick={onToggleFit}>
                 <div className="dy-sidebar-icon">
@@ -151,6 +191,26 @@ const VideoSidebar = ({ video, onToggleFit, fitMode, isActive, onDelete }) => {
                 cancelText="取消"
                 isDangerous={true}
             />
+
+            <SharePanel
+                isOpen={showShare}
+                onClose={() => setShowShare(false)}
+                videoId={video.id}
+                videoTitle={video.title}
+                onShare={(channel) => {
+                    shareVideo(token, video.id, channel)
+                        .then(data => {
+                            if (data?.shareCount != null) {
+                                setShareCount(data.shareCount);
+                            } else {
+                                setShareCount(prev => prev + 1);
+                            }
+                        })
+                        .catch(err => console.error('Failed to report share:', err));
+                }}
+            />
+
+
         </div>
     );
 };

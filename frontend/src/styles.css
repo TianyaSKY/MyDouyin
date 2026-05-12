@@ -3,6 +3,8 @@
 @import './styles/interest-bubble.css';
 @import './styles/volume.css';
 @import './styles/douyin-feed.css';
+@import './styles/share.css';
+@import './styles/comment.css';
 
 @tailwind base;
 @tailwind components;

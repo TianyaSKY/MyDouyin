@@ -18,6 +18,7 @@ import com.douyin.entity.enums.EventType;
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoUploadService;
 import com.douyin.service.UserVideoActionService;
+import com.douyin.service.VideoStatsDailyService;
 import com.douyin.service.security.JwtUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class VideoController {
     private final RabbitTemplate rabbitTemplate;
     private final MediaUrlResolver mediaUrlResolver;
     private final UserVideoActionService userVideoActionService;
+    private final VideoStatsDailyService videoStatsDailyService;
 
     /**
      * GET /api/videos/{id} - Get video by ID
@@ -237,6 +239,67 @@ public class VideoController {
         long likeCount = userVideoActionService.countActiveLikes(id);
 
         return Result.ok(new VideoLikeStatusResponse(id, likeCount, liked));
+    }
+
+    /**
+     * GET /api/videos/{id}/share - 查询分享总数
+     */
+    @GetMapping("/{id}/share")
+    public Result<Map<String, Object>> getShareCount(@PathVariable Long id) {
+        Video video = videoService.getById(id);
+        if (video == null) {
+            return Result.fail(404, "Video not found");
+        }
+
+        com.douyin.entity.VideoStatsDaily stats = videoStatsDailyService.getTotalStatsByVideo(id);
+        long shareCount = (stats != null && stats.getShareCnt() != null) ? stats.getShareCnt() : 0;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("videoId", id);
+        data.put("shareCount", shareCount);
+        return Result.ok(data);
+    }
+
+    /**
+     * POST /api/videos/{id}/share - 记录一次分享
+     */
+    @PostMapping("/{id}/share")
+    public Result<Map<String, Object>> shareVideo(@PathVariable Long id,
+                                                   @RequestBody(required = false) Map<String, Object> body) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return Result.fail(401, "未登录");
+        }
+
+        Video video = videoService.getById(id);
+        if (video == null) {
+            return Result.fail(404, "Video not found");
+        }
+
+        // Send share event to MQ
+        UserEvent shareEvent = new UserEvent();
+        shareEvent.setUserId(userId);
+        shareEvent.setVideoId(id);
+        shareEvent.setEventType(EventType.SHARE);
+        shareEvent.setTs(LocalDateTime.now());
+        if (body != null) {
+            shareEvent.setCtx(body);
+        }
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY,
+                shareEvent
+        );
+
+        // Return updated share count
+        com.douyin.entity.VideoStatsDaily stats = videoStatsDailyService.getTotalStatsByVideo(id);
+        long shareCount = (stats != null && stats.getShareCnt() != null) ? stats.getShareCnt() : 0;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("videoId", id);
+        data.put("shareCount", shareCount + 1); // Optimistic increment
+        data.put("shared", true);
+        return Result.ok(data);
     }
 
     /**
