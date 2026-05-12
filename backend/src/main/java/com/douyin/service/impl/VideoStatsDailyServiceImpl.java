@@ -12,7 +12,13 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMapper, VideoStatsDaily>
@@ -59,8 +65,9 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
         long like = eventType == EventType.LIKE ? 1 : 0;
         long finish = eventType == EventType.FINISH ? 1 : 0;
         long share = eventType == EventType.SHARE ? 1 : 0;
+        long comment = eventType == EventType.COMMENT ? 1 : 0;
 
-        baseMapper.upsertStats(videoId, today, impr, click, like, finish, share, watchMs);
+        baseMapper.upsertStats(videoId, today, impr, click, like, finish, share, comment, watchMs);
     }
 
     @Override
@@ -73,5 +80,16 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
     @Cacheable(cacheNames = "videoTotalStats", key = "#videoId", condition = "#videoId != null")
     public VideoStatsDaily getTotalStatsByVideo(Long videoId) {
         return baseMapper.sumStatsByVideoId(videoId);
+    }
+
+    @Override
+    public Map<Long, VideoStatsDaily> batchGetLatestStatsMap(Collection<Long> videoIds) {
+        if (videoIds == null || videoIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<VideoStatsDaily> statsList = baseMapper.batchGetLatestStats(new ArrayList<>(videoIds));
+        return statsList.stream()
+                .filter(s -> s.getVideoId() != null)
+                .collect(Collectors.toMap(VideoStatsDaily::getVideoId, Function.identity(), (a, b) -> a));
     }
 }

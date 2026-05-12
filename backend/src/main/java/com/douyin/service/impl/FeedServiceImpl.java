@@ -2,6 +2,7 @@ package com.douyin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.douyin.common.config.RabbitMQConfig;
+import com.douyin.common.util.HotScoreCalculator;
 import com.douyin.entity.dto.FeedResponse;
 import com.douyin.entity.dto.RecallCandidate;
 import com.douyin.entity.UserEvent;
@@ -14,22 +15,20 @@ import com.douyin.service.IMilvusService;
 import com.douyin.service.UserEmbeddingService;
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoStatsDailyService;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -53,10 +52,23 @@ public class FeedServiceImpl implements IFeedService {
     // Thread pool for parallel recall
     private final ExecutorService recallExecutor = Executors.newFixedThreadPool(10);
 
+    @PreDestroy
+    public void shutdown() {
+        recallExecutor.shutdown();
+        try {
+            if (!recallExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                recallExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            recallExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
     // Redis ZSET：全局热门视频池 key。
     private static final String HOT_VIDEO_KEY = "video:hot";
-    // Redis String：用户已看视频单条记录 key 前缀。
-    private static final String USER_SEEN_KEY_PREFIX = "user:seen:item:";
+    // Redis Set：用户已看视频集合 key 前缀。
+    private static final String USER_SEEN_KEY_PREFIX = "user:seen:set:";
     private static final long USER_SEEN_EXPIRE_DAYS = 7L;
     // 候选召回放大倍数，避免过滤和排序后结果不足。
     private static final int RECALL_MULTIPLIER = 3;
@@ -167,14 +179,19 @@ public class FeedServiceImpl implements IFeedService {
      */
     private Set<Long> getUserSeenIds(Long userId) {
         try {
-            String pattern = USER_SEEN_KEY_PREFIX + userId + ":*";
-            Set<String> matchedKeys = scanKeys(pattern);
-            if (matchedKeys.isEmpty()) {
+            String seenKey = USER_SEEN_KEY_PREFIX + userId;
+            Set<Object> members = redisTemplate.opsForSet().members(seenKey);
+            if (members == null || members.isEmpty()) {
                 return Collections.emptySet();
             }
-
-            return matchedKeys.stream()
-                .map(this::extractVideoIdFromSeenKey)
+            return members.stream()
+                .map(obj -> {
+                    try {
+                        return Long.parseLong(obj.toString());
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         } catch (Exception e) {
@@ -375,42 +392,24 @@ public class FeedServiceImpl implements IFeedService {
     }
 
     /**
-     * 排序：粗排（按召回分数 + 热度分）
+     * 排序：粗排（按召回分数 + 热度分）。
+     * 批量查询统计数据，避免逐个查询的 N+1 问题。
      */
     private List<RecallCandidate> rankCandidates(List<RecallCandidate> candidates) {
+        // 批量获取所有候选视频的最新统计
+        Set<Long> videoIds = candidates.stream()
+            .map(c -> c.getVideo().getId())
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+        Map<Long, VideoStatsDaily> statsMap = videoStatsDailyService.batchGetLatestStatsMap(videoIds);
+
         return candidates.stream()
             .sorted((a, b) -> {
-                double scoreA = a.getScore() + calculateHotScore(a.getVideo());
-                double scoreB = b.getScore() + calculateHotScore(b.getVideo());
+                double scoreA = a.getScore() + HotScoreCalculator.calculateBaseScore(statsMap.get(a.getVideo().getId()));
+                double scoreB = b.getScore() + HotScoreCalculator.calculateBaseScore(statsMap.get(b.getVideo().getId()));
                 return Double.compare(scoreB, scoreA);
             })
             .collect(Collectors.toList());
-    }
-
-    /**
-     * 计算视频热度分
-     */
-    private double calculateHotScore(Video video) {
-        try {
-            VideoStatsDaily stats = videoStatsDailyService.getOne(
-                new LambdaQueryWrapper<VideoStatsDaily>()
-                    .eq(VideoStatsDaily::getVideoId, video.getId())
-                    .orderByDesc(VideoStatsDaily::getDate)
-                    .last("LIMIT 1")
-            );
-
-            if (stats == null) {
-                return 0.0;
-            }
-
-            // 热度分 = 点赞*2 + 完播*3 + 分享*5
-            return stats.getLikeCnt() * 2.0 
-                 + stats.getFinishCnt() * 3.0 
-                 + (stats.getShareCnt() != null ? stats.getShareCnt() * 5.0 : 0);
-
-        } catch (Exception e) {
-            return 0.0;
-        }
     }
 
     /**
@@ -438,56 +437,21 @@ public class FeedServiceImpl implements IFeedService {
     }
 
     /**
-     * 更新用户已看集合（单条记录单 key，独立 7 天过期）
+     * 更新用户已看集合（Redis Set，整个 Set 统一续期 7 天）
      */
     private void updateUserSeenSet(Long userId, List<Video> videos) {
         try {
-            for (Video video : videos) {
-                if (video == null || video.getId() == null) {
-                    continue;
-                }
-                String seenKey = buildSeenKey(userId, video.getId());
-                redisTemplate.opsForValue().set(seenKey, "1", USER_SEEN_EXPIRE_DAYS,
-                        java.util.concurrent.TimeUnit.DAYS);
+            String seenKey = USER_SEEN_KEY_PREFIX + userId;
+            Object[] videoIds = videos.stream()
+                .filter(v -> v != null && v.getId() != null)
+                .map(v -> (Object) v.getId().toString())
+                .toArray();
+            if (videoIds.length > 0) {
+                redisTemplate.opsForSet().add(seenKey, videoIds);
+                redisTemplate.expire(seenKey, USER_SEEN_EXPIRE_DAYS, TimeUnit.DAYS);
             }
         } catch (Exception e) {
             log.error("Error updating user seen set", e);
         }
-    }
-
-    private String buildSeenKey(Long userId, Long videoId) {
-        return USER_SEEN_KEY_PREFIX + userId + ":" + videoId;
-    }
-
-    private Long extractVideoIdFromSeenKey(String key) {
-        int lastColon = key.lastIndexOf(':');
-        if (lastColon < 0 || lastColon == key.length() - 1) {
-            return null;
-        }
-        try {
-            return Long.parseLong(key.substring(lastColon + 1));
-        } catch (NumberFormatException e) {
-            log.warn("Invalid seen key format: {}", key);
-            return null;
-        }
-    }
-
-    private Set<String> scanKeys(String pattern) {
-        Set<String> keys = redisTemplate.execute((RedisConnection connection) -> {
-            Set<String> matchedKeys = new HashSet<>();
-            ScanOptions options = ScanOptions.scanOptions()
-                    .match(pattern)
-                    .count(1000)
-                    .build();
-            try (Cursor<byte[]> cursor = connection.scan(options)) {
-                while (cursor.hasNext()) {
-                    matchedKeys.add(new String(cursor.next(), StandardCharsets.UTF_8));
-                }
-            } catch (Exception e) {
-                log.error("Error scanning Redis keys by pattern: {}", pattern, e);
-            }
-            return matchedKeys;
-        });
-        return keys == null ? Collections.emptySet() : keys;
     }
 }

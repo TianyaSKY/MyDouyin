@@ -165,3 +165,22 @@ class HealthResponse(BaseModel):
     status: str
     device: str
     models: Dict[str, str]
+
+
+class CommentPreferenceRequest(BaseModel):
+    """评论偏好计算请求"""
+
+    user_id: int = Field(..., description="用户ID")
+    video_id: int = Field(..., description="视频ID")
+    comment_id: int = Field(..., description="评论ID")
+    content: str = Field(..., description="评论内容")
+
+
+class CommentPreferenceResponse(BaseModel):
+    """评论偏好计算响应"""
+
+    user_id: int
+    video_id: int
+    comment_id: int
+    preference_score: float
+

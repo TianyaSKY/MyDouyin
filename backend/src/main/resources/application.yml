@@ -1,5 +1,5 @@
 server:
-  port: ${BACKEND_PORT:18081}
+  port: ${BACKEND_PORT:8081}
 
 springdotenv:
   directory: ..
@@ -58,9 +58,9 @@ jwt:
   expiration: 604800000   # 7 days in ms (single token mode)
 
 app:
-  media-base-url: ${MEDIA_BASE_URL:http://localhost:18081}
+  media-base-url: ${MEDIA_BASE_URL:http://localhost:8081}
   upload:
-    base-dir: storage
+    base-dir: ../storage
     temp-dir: tmp
     video-dir: videos
     url-prefix: /uploads/videos/
@@ -75,6 +75,6 @@ milvus:
 # Recommend Service Configuration (FastAPI)
 recommend:
   service:
-    url: ${RECOMMEND_SERVICE_URL:http://${RECOMMEND_HOST:localhost}:${RECOMMEND_PORT:18101}}
+    url: ${RECOMMEND_SERVICE_URL:http://${RECOMMEND_HOST:localhost}:${RECOMMEND_PORT:8082}}
     timeout: ${RECOMMEND_SERVICE_TIMEOUT:5000}
     retry: ${RECOMMEND_SERVICE_RETRY:3}

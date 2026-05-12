@@ -46,11 +46,13 @@ const VideoFeed = () => {
         }
     }, [user, videos.length, loadMoreVideos]);
 
-    // Update document title based on current video
+    // Update document title and URL based on current video
     useEffect(() => {
         if (videos.length > 0 && videos[currentVideoIndex]) {
             const currentVideo = videos[currentVideoIndex];
             document.title = `${currentVideo.title || '视频'} - Douyin`;
+            // Keep URL in sync for sharing
+            window.history.replaceState(null, '', `/video/${currentVideo.id}`);
         } else {
             document.title = 'Douyin';
         }
@@ -85,7 +87,7 @@ const VideoFeed = () => {
 
     return (
         <div
-            className="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar feed-atmosphere"
+            className="h-screen w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar bg-black"
             onScroll={handleScroll}
         >
             {videos.map((video, index) => (

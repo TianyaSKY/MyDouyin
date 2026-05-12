@@ -18,6 +18,8 @@ public class RabbitMQConfig {
     public static final String ROUTING_KEY = "event.user_behavior";
     public static final String VIDEO_EMBEDDING_QUEUE_NAME = "event.video_embedding.queue";
     public static final String VIDEO_EMBEDDING_ROUTING_KEY = "event.video_embedding";
+    public static final String COMMENT_QUEUE_NAME = "event.comment.queue";
+    public static final String COMMENT_ROUTING_KEY = "event.comment";
 
     @Bean
     public DirectExchange exchange() {
@@ -34,6 +36,11 @@ public class RabbitMQConfig {
         return new Queue(VIDEO_EMBEDDING_QUEUE_NAME, true);
     }
 
+    @Bean("commentQueue")
+    public Queue commentQueue() {
+        return new Queue(COMMENT_QUEUE_NAME, true);
+    }
+
     @Bean
     public Binding userEventBinding(
             @Qualifier("userEventQueue") Queue queue,
@@ -46,6 +53,13 @@ public class RabbitMQConfig {
             @Qualifier("videoEmbeddingQueue") Queue queue,
             DirectExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(VIDEO_EMBEDDING_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding commentBinding(
+            @Qualifier("commentQueue") Queue queue,
+            DirectExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(COMMENT_ROUTING_KEY);
     }
 
     @Bean

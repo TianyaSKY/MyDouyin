@@ -1,6 +1,7 @@
 package com.douyin.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.douyin.common.util.HotScoreCalculator;
 import com.douyin.entity.Video;
 import com.douyin.entity.VideoStatsDaily;
 import com.douyin.entity.enums.VideoStatus;
@@ -10,8 +11,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -43,20 +45,17 @@ public class HotVideoScheduler {
                 return;
             }
 
+            // 批量获取所有视频的最新统计数据（1 次 SQL 替代 N 次）
+            List<Long> videoIds = publishedVideos.stream()
+                .map(Video::getId)
+                .collect(Collectors.toList());
+            Map<Long, VideoStatsDaily> statsMap = videoStatsDailyService.batchGetLatestStatsMap(videoIds);
+
             int updatedCount = 0;
-            LocalDate today = LocalDate.now();
-
             for (Video video : publishedVideos) {
-                // 获取最近的统计数据
-                VideoStatsDaily stats = videoStatsDailyService.getOne(
-                    new LambdaQueryWrapper<VideoStatsDaily>()
-                        .eq(VideoStatsDaily::getVideoId, video.getId())
-                        .orderByDesc(VideoStatsDaily::getDate)
-                        .last("LIMIT 1")
-                );
+                VideoStatsDaily stats = statsMap.get(video.getId());
+                double score = HotScoreCalculator.calculateWithTimeDecay(video, stats);
 
-                double score = calculateHotScore(video, stats);
-                
                 // 更新到 Redis ZSET
                 redisTemplate.opsForZSet().add(HOT_VIDEO_KEY, video.getId().toString(), score);
                 updatedCount++;
@@ -77,30 +76,6 @@ public class HotVideoScheduler {
     }
 
     /**
-     * 计算热度分
-     * 公式：点赞*2 + 完播*3 + 分享*5 - 时间衰减
-     */
-    private double calculateHotScore(Video video, VideoStatsDaily stats) {
-        double baseScore = 0.0;
-
-        if (stats != null) {
-            baseScore = stats.getLikeCnt() * 2.0
-                      + stats.getFinishCnt() * 3.0
-                      + (stats.getShareCnt() != null ? stats.getShareCnt() * 5.0 : 0);
-        }
-
-        // 时间衰减：每小时衰减 0.1 分
-        long hoursAgo = java.time.Duration.between(
-            video.getCreatedAt(),
-            java.time.LocalDateTime.now()
-        ).toHours();
-        
-        double timeDecay = hoursAgo * 0.1;
-
-        return Math.max(0, baseScore - timeDecay);
-    }
-
-    /**
      * 应用启动时初始化热门池
      */
     @Scheduled(initialDelay = 10000, fixedDelay = Long.MAX_VALUE) // 启动10秒后执行一次
@@ -109,4 +84,3 @@ public class HotVideoScheduler {
         updateHotVideoPool();
     }
 }
-

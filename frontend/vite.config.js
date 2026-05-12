@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 export default defineConfig(({ mode }) => {
   // 统一从项目根目录 .env 读取端口配置
   const env = loadEnv(mode, "..", "");
-  const backendPort = env.BACKEND_PORT || "18081";
+  const backendPort = env.BACKEND_PORT || "8081";
   const parsedFrontendPort = Number(env.FRONTEND_PORT || "5173");
   const frontendPort = Number.isFinite(parsedFrontendPort)
     ? parsedFrontendPort

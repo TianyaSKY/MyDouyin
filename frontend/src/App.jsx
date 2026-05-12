@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { LoginPage } from './components/Auth/LoginPage';
 import VideoFeed from './components/Feed/VideoFeed';
+import SingleVideoPage from './components/Feed/SingleVideoPage';
 import BottomNavigation from './components/Layout/BottomNavigation';
 import ProfilePage from './components/Profile/ProfilePage';
 import UploadModal from './components/Upload/UploadModal';
@@ -65,6 +66,26 @@ function AppContent() {
         />
         <Route
           path="/me"
+          element={
+            <ProtectedRoute>
+              <>
+                <ProfilePage />
+                <BottomNavigation onUpload={() => setIsUploadOpen(true)} />
+                <UploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
+              </>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/video/:id"
+          element={
+            <ProtectedRoute>
+              <SingleVideoPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/user/:id"
           element={
             <ProtectedRoute>
               <>

@@ -14,6 +14,8 @@ from .recommend import (
     InsertUserVectorRequest,
     VectorRecallRequest,
     HealthResponse,
+    CommentPreferenceRequest,
+    CommentPreferenceResponse,
 )
 
 __all__ = [
@@ -32,4 +34,7 @@ __all__ = [
     "InsertUserVectorRequest",
     "VectorRecallRequest",
     "HealthResponse",
+    "CommentPreferenceRequest",
+    "CommentPreferenceResponse",
 ]
+

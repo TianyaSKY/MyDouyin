@@ -30,11 +30,14 @@ public class UploadStaticResourceConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         Path videoRoot = Paths.get(baseDir).toAbsolutePath().normalize().resolve(videoDirName);
         String videoPattern = normalizePrefix(urlPrefix) + "**";
+        System.out.println("[StaticResource] Video pattern: " + videoPattern + " -> " + videoRoot.toUri());
+        System.out.println("[StaticResource] Video dir exists: " + videoRoot.toFile().exists());
         registry.addResourceHandler(videoPattern)
                 .addResourceLocations(videoRoot.toUri().toString());
 
         Path coverRoot = Paths.get(baseDir).toAbsolutePath().normalize().resolve(coverDirName);
         String coverPattern = normalizePrefix(coverUrlPrefix) + "**";
+        System.out.println("[StaticResource] Cover pattern: " + coverPattern + " -> " + coverRoot.toUri());
         registry.addResourceHandler(coverPattern)
                 .addResourceLocations(coverRoot.toUri().toString());
     }

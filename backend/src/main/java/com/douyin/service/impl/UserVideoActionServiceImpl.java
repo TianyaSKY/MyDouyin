@@ -1,6 +1,7 @@
 package com.douyin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.douyin.entity.UserVideoAction;
 import com.douyin.entity.enums.UserVideoActionType;
@@ -93,5 +94,26 @@ public class UserVideoActionServiceImpl extends ServiceImpl<UserVideoActionMappe
                 .eq(UserVideoAction::getVideoId, videoId)
                 .eq(UserVideoAction::getActionType, UserVideoActionType.LIKE)
                 .eq(UserVideoAction::getStatus, STATUS_ACTIVE)) > 0;
+    }
+
+    @Override
+    public IPage<Long> getLikedVideoIds(Long userId, int current, int size) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<UserVideoAction> page =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(current, size);
+
+        IPage<UserVideoAction> actionPage = page(page, new LambdaQueryWrapper<UserVideoAction>()
+                .eq(UserVideoAction::getUserId, userId)
+                .eq(UserVideoAction::getActionType, UserVideoActionType.LIKE)
+                .eq(UserVideoAction::getStatus, STATUS_ACTIVE)
+                .orderByDesc(UserVideoAction::getUpdatedAt));
+
+        // Convert IPage<UserVideoAction> to IPage<Long> containing video IDs
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<Long> resultPage =
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(
+                        actionPage.getCurrent(), actionPage.getSize(), actionPage.getTotal());
+        resultPage.setRecords(actionPage.getRecords().stream()
+                .map(UserVideoAction::getVideoId)
+                .collect(java.util.stream.Collectors.toList()));
+        return resultPage;
     }
 }

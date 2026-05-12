@@ -3,6 +3,7 @@ package com.douyin.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.douyin.client.RecommendServiceClient;
+import com.douyin.common.BusinessException;
 import com.douyin.entity.dto.LoginRequest;
 import com.douyin.entity.dto.RegisterRequest;
 import com.douyin.entity.dto.TokenResponse;
@@ -45,7 +46,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     public TokenResponse register(RegisterRequest request) {
         // Check if username already exists
         if (getByUsername(request.getUsername()) != null) {
-            throw new RuntimeException("用户名已存在");
+            throw new BusinessException("用户名已存在");
         }
 
         // Create user
@@ -68,11 +69,11 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     public TokenResponse login(LoginRequest request) {
         UserProfile user = getByUsername(request.getUsername());
         if (user == null) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new BusinessException("用户名或密码错误");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new BusinessException("用户名或密码错误");
         }
 
         return buildTokenResponse(user);

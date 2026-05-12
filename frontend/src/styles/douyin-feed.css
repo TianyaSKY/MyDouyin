@@ -1,0 +1,444 @@
+/* ═══════════════════════════════════════════════
+   Douyin-Authentic Video Player Styles
+   ═══════════════════════════════════════════════ */
+
+/* ─── Player Container ─── */
+.dy-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.dy-player-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.4;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.15);
+  filter: blur(30px) brightness(0.5);
+  transition: opacity 0.7s ease;
+}
+
+.dy-player-video {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 1;
+  transition: object-fit 0.3s ease;
+  cursor: pointer;
+}
+
+.dy-player-video--contain {
+  object-fit: contain;
+}
+
+.dy-player-video--cover {
+  object-fit: cover;
+}
+
+/* ─── Pause Indicator ─── */
+.dy-player-pause-indicator {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.dy-player-pause-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  opacity: 0.9;
+}
+
+/* ─── Bottom Progress Bar ─── */
+.dy-progress {
+  position: absolute;
+  bottom: 52px; /* above bottom nav */
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 8px 12px 4px;
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dy-progress-bar {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 1px;
+  transition: height 0.15s ease;
+}
+
+.dy-progress:hover .dy-progress-bar {
+  height: 4px;
+}
+
+.dy-progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: #fff;
+  border-radius: 1px;
+  transition: width 0.1s linear;
+}
+
+.dy-progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.15s ease;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.dy-progress:hover .dy-progress-thumb {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.dy-progress-time {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.dy-progress:hover .dy-progress-time {
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════
+   Douyin-Authentic Video Overlay (Bottom-Left)
+   ═══════════════════════════════════════════════ */
+
+.dy-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 120px; /* avoid overlapping sidebar */
+  padding: 0 16px 72px; /* above progress bar + nav */
+  pointer-events: none;
+  z-index: 10;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(0, 0, 0, 0.2) 40%,
+    transparent 100%
+  );
+}
+
+.dy-overlay-content {
+  pointer-events: auto;
+  max-width: 70%;
+}
+
+.dy-overlay-author {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.01em;
+}
+
+.dy-overlay-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.5;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.dy-overlay-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.dy-overlay-tag {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.dy-overlay-tag:hover {
+  color: #fff;
+}
+
+.dy-overlay-music {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+}
+
+.dy-overlay-music-icon {
+  flex-shrink: 0;
+  animation: spin 3s linear infinite;
+}
+
+.dy-overlay-music-scroll {
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 200px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 8px, #000 calc(100% - 16px), transparent 100%);
+}
+
+/* ═══════════════════════════════════════════════
+   Douyin-Authentic Right Sidebar
+   ═══════════════════════════════════════════════ */
+
+.dy-sidebar {
+  position: absolute;
+  right: 16px;
+  bottom: 72px; /* above progress bar + nav */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* Avatar */
+.dy-sidebar-avatar-wrap {
+  position: relative;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.dy-sidebar-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  overflow: hidden;
+  background: #1a1a1a;
+  transition: transform 0.2s ease;
+}
+
+.dy-sidebar-avatar-wrap:hover .dy-sidebar-avatar {
+  transform: scale(1.05);
+}
+
+.dy-sidebar-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dy-sidebar-follow {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #FE2C55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(254, 44, 85, 0.4);
+  border: 2px solid #000;
+}
+
+/* Action Buttons */
+.dy-sidebar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  gap: 4px;
+}
+
+.dy-sidebar-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.dy-sidebar-btn:hover .dy-sidebar-icon {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dy-sidebar-btn:active .dy-sidebar-icon {
+  transform: scale(0.85);
+}
+
+.dy-sidebar-icon--liked {
+  color: #FE2C55;
+}
+
+.dy-sidebar-icon--delete:hover {
+  color: #FE2C55;
+}
+
+.dy-sidebar-count {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  line-height: 1;
+}
+
+/* Music Disc */
+.dy-sidebar-disc {
+  margin-top: 4px;
+}
+
+.dy-sidebar-disc-outer {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #282828, #1a1a1a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin 8s linear infinite;
+  box-shadow: 0 0 0 4px #0a0a0a;
+}
+
+.dy-sidebar-disc-inner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #333;
+}
+
+.dy-sidebar-disc-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ═══════════════════════════════════════════════
+   Douyin-Authentic Bottom Navigation
+   ═══════════════════════════════════════════════ */
+
+.dy-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: rgba(0, 0, 0, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dy-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  cursor: pointer;
+  gap: 2px;
+}
+
+.dy-nav-item--active {
+  color: #fff;
+}
+
+.dy-nav-item:hover:not(.dy-nav-item--active) {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.dy-nav-label {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* Upload Button — Douyin style with cyan/rose side accents */
+.dy-nav-upload-btn {
+  position: relative;
+  width: 44px;
+  height: 28px;
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dy-nav-upload-btn::before,
+.dy-nav-upload-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  z-index: -1;
+}
+
+.dy-nav-upload-btn::before {
+  background: #25F4EE;
+  transform: translateX(-3px);
+}
+
+.dy-nav-upload-btn::after {
+  background: #FE2C55;
+  transform: translateX(3px);
+}
+
+.dy-nav-item:hover .dy-nav-upload-btn {
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(254, 44, 85, 0.3);
+}

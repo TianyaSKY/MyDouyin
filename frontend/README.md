@@ -78,7 +78,7 @@ The frontend integrates with the following backend endpoints:
 ## Configuration
 
 ### Environment Variables
-The frontend uses the backend API at `http://localhost:18081` by default. To change this, update the API client in `src/api/client.js`.
+The frontend uses the backend API at `http://localhost:8081` by default. To change this, update the API client in `src/api/client.js`.
 
 ### Tailwind CSS
 The project uses Tailwind CSS v3 with custom configuration:
@@ -136,7 +136,7 @@ Once authentication is working, you can extend the frontend with:
 
 ### Authentication Issues
 - **Token not stored**: Check localStorage permissions
-- **API errors**: Verify backend is running on port 18081
+- **API errors**: Verify backend is running on port 8081
 - **Validation errors**: Check form validation rules
 
 ## Browser Support

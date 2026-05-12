@@ -18,6 +18,7 @@ import com.douyin.entity.enums.EventType;
 import com.douyin.service.VideoService;
 import com.douyin.service.VideoUploadService;
 import com.douyin.service.UserVideoActionService;
+import com.douyin.service.VideoStatsDailyService;
 import com.douyin.service.security.JwtUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class VideoController {
     private final RabbitTemplate rabbitTemplate;
     private final MediaUrlResolver mediaUrlResolver;
     private final UserVideoActionService userVideoActionService;
+    private final VideoStatsDailyService videoStatsDailyService;
 
     /**
      * GET /api/videos/{id} - Get video by ID
@@ -79,6 +81,41 @@ public class VideoController {
         IPage<Video> page = videoService.pageByAuthor(authorId, current, size);
         toPublicUrls(page);
         return Result.ok(page);
+    }
+
+    /**
+     * GET /api/videos/liked/{userId} - List videos liked by a user (paginated)
+     */
+    @GetMapping("/liked/{userId}")
+    public Result<Map<String, Object>> listLikedVideos(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int current,
+            @RequestParam(defaultValue = "18") int size) {
+        IPage<Long> likedVideoIds = userVideoActionService.getLikedVideoIds(userId, current, size);
+
+        List<Video> videos = new java.util.ArrayList<>();
+        if (likedVideoIds.getRecords() != null && !likedVideoIds.getRecords().isEmpty()) {
+            List<Video> found = videoService.listByIds(likedVideoIds.getRecords());
+            // Preserve the order from likedVideoIds
+            Map<Long, Video> videoMap = new HashMap<>();
+            for (Video v : found) {
+                toPublicUrls(v);
+                videoMap.put(v.getId(), v);
+            }
+            for (Long vid : likedVideoIds.getRecords()) {
+                Video v = videoMap.get(vid);
+                if (v != null) {
+                    videos.add(v);
+                }
+            }
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("records", videos);
+        data.put("total", likedVideoIds.getTotal());
+        data.put("current", likedVideoIds.getCurrent());
+        data.put("size", likedVideoIds.getSize());
+        return Result.ok(data);
     }
 
     /**
@@ -237,6 +274,67 @@ public class VideoController {
         long likeCount = userVideoActionService.countActiveLikes(id);
 
         return Result.ok(new VideoLikeStatusResponse(id, likeCount, liked));
+    }
+
+    /**
+     * GET /api/videos/{id}/share - 查询分享总数
+     */
+    @GetMapping("/{id}/share")
+    public Result<Map<String, Object>> getShareCount(@PathVariable Long id) {
+        Video video = videoService.getById(id);
+        if (video == null) {
+            return Result.fail(404, "Video not found");
+        }
+
+        com.douyin.entity.VideoStatsDaily stats = videoStatsDailyService.getTotalStatsByVideo(id);
+        long shareCount = (stats != null && stats.getShareCnt() != null) ? stats.getShareCnt() : 0;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("videoId", id);
+        data.put("shareCount", shareCount);
+        return Result.ok(data);
+    }
+
+    /**
+     * POST /api/videos/{id}/share - 记录一次分享
+     */
+    @PostMapping("/{id}/share")
+    public Result<Map<String, Object>> shareVideo(@PathVariable Long id,
+                                                   @RequestBody(required = false) Map<String, Object> body) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return Result.fail(401, "未登录");
+        }
+
+        Video video = videoService.getById(id);
+        if (video == null) {
+            return Result.fail(404, "Video not found");
+        }
+
+        // Send share event to MQ
+        UserEvent shareEvent = new UserEvent();
+        shareEvent.setUserId(userId);
+        shareEvent.setVideoId(id);
+        shareEvent.setEventType(EventType.SHARE);
+        shareEvent.setTs(LocalDateTime.now());
+        if (body != null) {
+            shareEvent.setCtx(body);
+        }
+        rabbitTemplate.convertAndSend(
+                RabbitMQConfig.EXCHANGE_NAME,
+                RabbitMQConfig.ROUTING_KEY,
+                shareEvent
+        );
+
+        // Return updated share count
+        com.douyin.entity.VideoStatsDaily stats = videoStatsDailyService.getTotalStatsByVideo(id);
+        long shareCount = (stats != null && stats.getShareCnt() != null) ? stats.getShareCnt() : 0;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("videoId", id);
+        data.put("shareCount", shareCount + 1); // Optimistic increment
+        data.put("shared", true);
+        return Result.ok(data);
     }
 
     /**

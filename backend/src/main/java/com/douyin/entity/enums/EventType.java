@@ -17,7 +17,8 @@ public enum EventType {
     LIKE("like", "点赞"),
     FINISH("finish", "完播"),
     SHARE("share", "分享"),
-    LEAVE("leave", "离开");
+    LEAVE("leave", "离开"),
+    COMMENT("comment", "评论");
 
     @EnumValue
     private final String value;

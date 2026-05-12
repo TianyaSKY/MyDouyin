@@ -13,15 +13,11 @@ except ImportError:
     print("缺少依赖 pymysql，请先执行: pip install pymysql")
     sys.exit(1)
 
-try:
-    from pymilvus import Collection, connections
-except ImportError:
-    print("缺少依赖 pymilvus，请先执行: pip install pymilvus")
-    sys.exit(1)
+Collection = Any
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_INPUT = ROOT_DIR / "scripts" / "video_assets_backup.json"
+DEFAULT_INPUT = ROOT_DIR / "scripts" / "backup" / "video_assets_backup.json"
 VIDEO_COLLECTION = "video_embedding"
 
 
@@ -55,6 +51,11 @@ def mysql_config() -> Dict[str, Any]:
 
 
 def connect_milvus() -> None:
+    try:
+        from pymilvus import connections
+    except Exception as exc:
+        raise RuntimeError("缺少或无法加载依赖 pymilvus，请先检查 pymilvus 及其依赖版本") from exc
+
     connections.connect(
         alias="default",
         host=os.getenv("MILVUS_HOST", "localhost"),
@@ -71,29 +72,35 @@ def load_backup(input_path: Path) -> Dict[str, Any]:
     return cast(Dict[str, Any], data)
 
 
-def normalize_tags(tags: Any) -> str:
+def normalize_tags(tags: Any) -> List[str]:
     if tags is None:
-        return "[]"
+        return []
     if isinstance(tags, list):
-        return json.dumps(tags, ensure_ascii=False)
-    return json.dumps([str(tags)], ensure_ascii=False)
+        return [str(tag).strip() for tag in tags if str(tag).strip()]
+    return [str(tags).strip()] if str(tags).strip() else []
 
 
 def restore_mysql(records: List[Dict[str, Any]], dry_run: bool) -> int:
     if dry_run:
         return len(records)
 
-    sql = """
-        INSERT INTO videos (id, author_id, title, tags, status, cover_url, video_url, created_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    video_sql = """
+        INSERT INTO videos (id, author_id, title, status, cover_url, video_url, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
             author_id = VALUES(author_id),
             title = VALUES(title),
-            tags = VALUES(tags),
             status = VALUES(status),
             cover_url = VALUES(cover_url),
             video_url = VALUES(video_url),
             created_at = VALUES(created_at)
+    """
+    delete_tags_sql = "DELETE FROM video_tags WHERE video_id = %s"
+    tag_sql = """
+        INSERT INTO video_tags (video_id, tag_name, sort_order)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            sort_order = VALUES(sort_order)
     """
 
     restored = 0
@@ -103,18 +110,20 @@ def restore_mysql(records: List[Dict[str, Any]], dry_run: bool) -> int:
                 for record in records:
                     video = cast(Dict[str, Any], record["video"])
                     cursor.execute(
-                        sql,
+                        video_sql,
                         (
                             video["id"],
                             video["author_id"],
                             video["title"],
-                            normalize_tags(video.get("tags")),
                             video["status"],
                             video.get("cover_url"),
                             video["video_url"],
                             video.get("created_at"),
                         ),
                     )
+                    cursor.execute(delete_tags_sql, (video["id"],))
+                    for sort_order, tag in enumerate(normalize_tags(video.get("tags"))):
+                        cursor.execute(tag_sql, (video["id"], tag, sort_order))
                     restored += 1
             conn.commit()
         except Exception:
@@ -157,6 +166,11 @@ def restore_milvus(records: List[Dict[str, Any]], dry_run: bool) -> int:
     ]
     if dry_run or not target_records:
         return len(target_records)
+
+    try:
+        from pymilvus import Collection
+    except Exception as exc:
+        raise RuntimeError("缺少或无法加载依赖 pymilvus，请先检查 pymilvus 及其依赖版本") from exc
 
     collection = Collection(VIDEO_COLLECTION)
     restored = 0

@@ -47,6 +47,7 @@ class VideoStatsDailyServiceTest {
             eq(0L), // like
             eq(0L), // finish
             eq(0L), // share
+            eq(0L), // comment
             eq(0L)  // watchMs
         );
     }
@@ -66,6 +67,7 @@ class VideoStatsDailyServiceTest {
             eq(0L), // like
             eq(1L), // finish
             eq(0L), // share
+            eq(0L), // comment
             eq(15000L) // watchMs
         );
     }

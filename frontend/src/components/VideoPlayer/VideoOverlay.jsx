@@ -23,19 +23,38 @@ const VideoOverlay = ({ video }) => {
         fetchAuthor();
     }, [video.authorId, token]);
 
+    // Parse tags from video
+    const tags = video.tags || [];
+
     return (
-        <div className="absolute bottom-0 left-0 w-full pl-8 pr-8 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none pb-[82px] z-10 transition-all duration-300">
-            <div className="pointer-events-auto max-w-[80%]">
-                <h3 className="font-bold text-white text-xl md:text-2xl mb-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+        <div className="dy-overlay">
+            <div className="dy-overlay-content">
+                {/* Author Name */}
+                <h3 className="dy-overlay-author">
                     @{author?.nickname || author?.username || '用户'}
                 </h3>
-                <p className="text-white text-sm md:text-base mb-4 line-clamp-2 drop-shadow-md leading-relaxed font-normal opacity-95">
+
+                {/* Video Description */}
+                <p className="dy-overlay-desc">
                     {video.title}
                 </p>
-                <div className="flex items-center text-white text-xs md:text-sm opacity-90 slide-in-bottom">
-                    <Music size={16} className="mr-2.5 flex-shrink-0 animate-spin-slow" />
-                    <div className="overflow-hidden whitespace-nowrap mask-music-fade" style={{ width: '100%' }}>
-                        <span className="scrolling-text inline-block tracking-wide">
+
+                {/* Tags */}
+                {tags.length > 0 && (
+                    <div className="dy-overlay-tags">
+                        {tags.map((tag, idx) => (
+                            <span key={idx} className="dy-overlay-tag">
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
+
+                {/* Music Ticker */}
+                <div className="dy-overlay-music">
+                    <Music size={14} className="dy-overlay-music-icon" />
+                    <div className="dy-overlay-music-scroll">
+                        <span className="scrolling-text">
                             原声 - {author?.nickname || '用户'}
                         </span>
                     </div>

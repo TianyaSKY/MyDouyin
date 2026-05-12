@@ -1,0 +1,229 @@
+<mxfile version="14.6.13">
+  <diagram name="系统总体架构" id="archieve-redesign-v2">
+    <mxGraphModel dx="1100" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;b style=&quot;font-size:16px;&quot;&gt;系统总体架构&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:12px;&quot;&gt;System Architecture&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#002855;strokeColor=none;fontFamily=Microsoft YaHei;fontSize=16;fontColor=#FFFFFF;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="340" y="40" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 1: Frontend -->
+        <mxCell id="layer1" value="&lt;b style=&quot;font-size:12px;&quot;&gt;前端层 (Frontend Layer)&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#CCCCCC;strokeWidth=1;dashed=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#333333;verticalAlign=top;align=left;shadow=0;container=1;collapsible=0;spacingLeft=10;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="120" y="140" width="760" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="n1_1" value="&lt;b style=&quot;font-size:12px;&quot;&gt;React SPA 应用&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Web UI&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#999999;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="150" y="180" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n1_2" value="&lt;b style=&quot;font-size:12px;&quot;&gt;视频上传与 Feed&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Upload &amp;amp; Feed&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#999999;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="325" y="180" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n1_3" value="&lt;b style=&quot;font-size:12px;&quot;&gt;个人主页与互动&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Profile &amp;amp; Interaction&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#999999;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="500" y="180" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 2: Core Service -->
+        <mxCell id="layer2" value="&lt;b style=&quot;font-size:12px;&quot;&gt;核心服务层 (Core Service Layer)&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#CCCCCC;strokeWidth=1;dashed=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#333333;verticalAlign=top;align=left;shadow=0;container=1;collapsible=0;spacingLeft=10;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="120" y="290" width="760" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="n2_1" value="&lt;b style=&quot;font-size:14px;&quot;&gt;Spring Boot 核心后端&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Core Backend (Java)&lt;/i&gt;&lt;br&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;color:#666;&quot;&gt;鉴权 / 视频元数据 / 上传分片 / 行为记录&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;strokeWidth=1.5;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="150" y="330" width="500" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="n2_2" value="&lt;b style=&quot;font-size:14px;&quot;&gt;FastAPI 推荐&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Recommend&lt;/i&gt;&lt;br&gt;&lt;br&gt;&lt;span style=&quot;font-size:11px;color:#666;&quot;&gt;Embedding / 向量检索&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="680" y="330" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Layer 3: Infra -->
+        <mxCell id="layer3" value="&lt;b style=&quot;font-size:12px;&quot;&gt;数据与基础设施层 (Data &amp;amp; Infra Layer)&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#CCCCCC;strokeWidth=1;dashed=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#333333;verticalAlign=top;align=left;shadow=0;container=1;collapsible=0;spacingLeft=10;spacingTop=5;" vertex="1" parent="1">
+          <mxGeometry x="120" y="490" width="760" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="n3_1" value="&lt;b style=&quot;font-size:12px;&quot;&gt;MySQL&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Metadata&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#999999;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="150" y="540" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n3_2" value="&lt;b style=&quot;font-size:12px;&quot;&gt;本地存储&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Local Storage&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#999999;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="290" y="540" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n3_3" value="&lt;b style=&quot;font-size:12px;&quot;&gt;RabbitMQ&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Event MQ&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#999999;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="540" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n3_4" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Redis&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Cache &amp;amp; Tags&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#999999;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="570" y="540" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n3_5" value="&lt;b style=&quot;font-size:12px;&quot;&gt;Milvus&lt;/b&gt;&lt;br&gt;&lt;i style=&quot;font-size:11px;&quot;&gt;Vector DB&lt;/i&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8F9FA;strokeColor=#999999;strokeWidth=1;fontFamily=Microsoft YaHei;fontSize=12;fontColor=#000000;align=center;verticalAlign=middle;shadow=0;" vertex="1" parent="1">
+          <mxGeometry x="710" y="540" width="120" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Edges Frontend to Backend -->
+        <mxCell id="e_f1" edge="1" parent="1" source="n1_1" target="n2_1">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.5" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.15" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="e_f2" edge="1" parent="1" source="n1_2" target="n2_1">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.5" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.5" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="e_f3" edge="1" parent="1" source="n1_3" target="n2_1">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.5" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.85" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+
+        <!-- Backend to Recommend -->
+        <mxCell id="e_b1" edge="1" parent="1" source="n2_1" target="n2_2">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="1" />
+            <mxStyle key="exitY" value="0.5" />
+            <mxStyle key="entryX" value="0" />
+            <mxStyle key="entryY" value="0.5" />
+          </mxStyle>
+        </mxCell>
+
+        <!-- Core Backend to Infra -->
+        <mxCell id="e_i1" edge="1" parent="1" source="n2_1" target="n3_1">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.12" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.5" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="e_i2" edge="1" parent="1" source="n2_1" target="n3_2">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.4" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.5" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="e_i3" edge="1" parent="1" source="n2_1" target="n3_3">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.68" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.5" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="e_i4" edge="1" parent="1" source="n2_1" target="n3_4">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.96" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.5" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+
+        <!-- Recommend to Infra -->
+        <mxCell id="e_r1" edge="1" parent="1" source="n2_2" target="n3_4">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.1" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.9" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+        <mxCell id="e_r2" edge="1" parent="1" source="n2_2" target="n3_5">
+          <mxGeometry relative="1" as="geometry" />
+          <mxStyle as="style">
+            <mxStyle key="edgeStyle" value="orthogonalEdgeStyle" />
+            <mxStyle key="rounded" value="0" />
+            <mxStyle key="html" value="1" />
+            <mxStyle key="strokeColor" value="#000000" />
+            <mxStyle key="strokeWidth" value="1.5" />
+            <mxStyle key="endArrow" value="classic" />
+            <mxStyle key="startArrow" value="none" />
+            <mxStyle key="exitX" value="0.53" />
+            <mxStyle key="exitY" value="1" />
+            <mxStyle key="entryX" value="0.5" />
+            <mxStyle key="entryY" value="0" />
+          </mxStyle>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

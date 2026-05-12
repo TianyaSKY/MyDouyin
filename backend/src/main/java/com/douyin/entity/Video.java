@@ -40,4 +40,7 @@ public class Video {
 
     @TableField(exist = false)
     private Long viewCount;
+
+    @TableField(exist = false)
+    private Long shareCount;
 }
