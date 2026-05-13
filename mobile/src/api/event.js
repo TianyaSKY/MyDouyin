@@ -1,0 +1,19 @@
+import { apiFetch } from './client';
+
+/**
+ * Report user event to backend
+ * @param {string} token - User auth token
+ * @param {object} eventData - { userId, videoId, eventType, ctx, ts, tsMs }
+ */
+export async function reportEvent(token, eventData) {
+  if (!token) return;
+  try {
+    await apiFetch('/api/events', token, {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
+  } catch (err) {
+    // Silent fail for analytics to not disturb user experience
+    console.warn('Event reporting failed:', err);
+  }
+}

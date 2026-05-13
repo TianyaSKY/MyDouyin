@@ -27,6 +27,7 @@
 ## 技术栈
 
 - 前端：React 18、Vite、TailwindCSS、React Router、Lucide React
+- 移动端：React Native、Expo、React Navigation、expo-av
 - 后端：Spring Boot 3、MyBatis-Plus、MySQL、Redis、RabbitMQ、Milvus SDK
 - 推荐：FastAPI、PyTorch、Pydantic v2、Redis、Milvus、DashScope
 - 基础设施：Docker Compose、MySQL、Redis、RabbitMQ、Milvus、Attu
@@ -75,6 +76,7 @@
 Douyin/
 |-- backend/
 |-- frontend/
+|-- mobile/
 |-- recommend/
 |-- scripts/
 |-- storage/
@@ -164,3 +166,15 @@ npm install --prefix frontend
 npm run dev --prefix frontend
 npm run build --prefix frontend
 ```
+
+### mobile
+
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
+> **注意**：移动端需要修改 `mobile/src/constants/config.js` 中的 `API_BASE_URL` 为你的后端地址。
+> - Android 模拟器：`http://10.0.2.2:8081`
+> - 真机调试：`http://<你的局域网IP>:8081`
