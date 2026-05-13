@@ -82,7 +82,8 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     // ---- internal ----
 
     private TokenResponse buildTokenResponse(UserProfile user) {
-        String token = jwtUtils.generateToken(user.getUserId(), user.getUsername());
+        boolean isAdmin = user.getIs_admin() != null && user.getIs_admin() == 1;
+        String token = jwtUtils.generateToken(user.getUserId(), user.getUsername(), isAdmin);
 
         return TokenResponse.builder()
                 .token(token)

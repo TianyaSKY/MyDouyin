@@ -22,7 +22,7 @@ class JwtUtilsTest {
         Long userId = 1L;
         String username = "testuser";
 
-        String token = jwtUtils.generateToken(userId, username);
+        String token = jwtUtils.generateToken(userId, username, false);
 
         assertNotNull(token);
         assertFalse(token.isEmpty());
@@ -33,7 +33,7 @@ class JwtUtilsTest {
     void testGetUsernameFromToken() {
         Long userId = 1L;
         String username = "testuser";
-        String token = jwtUtils.generateToken(userId, username);
+        String token = jwtUtils.generateToken(userId, username, false);
 
         String extractedUsername = jwtUtils.getUsernameFromToken(token);
 
@@ -44,7 +44,7 @@ class JwtUtilsTest {
     void testGetUserIdFromToken() {
         Long userId = 123L;
         String username = "testuser";
-        String token = jwtUtils.generateToken(userId, username);
+        String token = jwtUtils.generateToken(userId, username, false);
 
         Long extractedUserId = jwtUtils.getUserIdFromToken(token);
 
@@ -55,7 +55,7 @@ class JwtUtilsTest {
     void testValidateToken() {
         Long userId = 1L;
         String username = "testuser";
-        String token = jwtUtils.generateToken(userId, username);
+        String token = jwtUtils.generateToken(userId, username, false);
 
         boolean isValid = jwtUtils.validateToken(token);
 
@@ -75,7 +75,7 @@ class JwtUtilsTest {
     void testIsTokenNotExpired() {
         Long userId = 1L;
         String username = "testuser";
-        String token = jwtUtils.generateToken(userId, username);
+        String token = jwtUtils.generateToken(userId, username, false);
 
         boolean isExpired = jwtUtils.isTokenExpired(token);
 
@@ -100,8 +100,8 @@ class JwtUtilsTest {
 
     @Test
     void testTokenWithDifferentUsers() {
-        String token1 = jwtUtils.generateToken(1L, "user1");
-        String token2 = jwtUtils.generateToken(2L, "user2");
+        String token1 = jwtUtils.generateToken(1L, "user1", false);
+        String token2 = jwtUtils.generateToken(2L, "user2", false);
 
         assertNotEquals(token1, token2);
         assertEquals("user1", jwtUtils.getUsernameFromToken(token1));

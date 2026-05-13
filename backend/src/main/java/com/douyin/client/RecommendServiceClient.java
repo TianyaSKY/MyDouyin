@@ -259,6 +259,9 @@ public class RecommendServiceClient {
             log.debug("Long-term vector not found for user {}", userId);
             return null;
 
+        } catch (HttpClientErrorException.NotFound e) {
+            log.debug("Long-term vector not found in Milvus for user {}", userId);
+            return null;
         } catch (Exception e) {
             log.error("Error getting long-term vector for user {}", userId, e);
             return null;

@@ -6,7 +6,8 @@ export async function apiFetch(path, token, init = {}) {
   if (!headers["Content-Type"] && !(init.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
-  if (token) headers.Authorization = `Bearer ${token}`;
+  const resolvedToken = token || localStorage.getItem('douyin_token');
+  if (resolvedToken) headers.Authorization = `Bearer ${resolvedToken}`;
 
   const url = path.startsWith('http') ? path : `${API_BASE_URL}${path}`;
   const response = await fetch(url, { ...init, headers });

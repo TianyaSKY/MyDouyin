@@ -67,7 +67,7 @@ class UserProfileServiceTest {
         when(userProfileMapper.selectOne(any(), anyBoolean())).thenReturn(null);
         when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
         when(userProfileMapper.insert(any(UserProfile.class))).thenReturn(1);
-        when(jwtUtils.generateToken(any(), anyString())).thenReturn("test-token");
+        when(jwtUtils.generateToken(any(), anyString(), anyBoolean())).thenReturn("test-token");
         when(jwtUtils.getExpiration()).thenReturn(3600000L);
         when(tagVectorCacheService.getAverageVectorByTags(anyList())).thenReturn(new java.util.ArrayList<>(java.util.Collections.nCopies(1024, 1.0f)));
         when(recommendServiceClient.insertUserVector(anyLong(), anyList(), anyList())).thenReturn(true);
@@ -77,7 +77,7 @@ class UserProfileServiceTest {
         assertNotNull(response);
         assertEquals("test-token", response.getToken());
         verify(userProfileMapper, times(1)).insert(any(UserProfile.class));
-        verify(jwtUtils, times(1)).generateToken(any(), anyString());
+        verify(jwtUtils, times(1)).generateToken(any(), anyString(), anyBoolean());
         verify(tagVectorCacheService, times(1)).getAverageVectorByTags(anyList());
         verify(recommendServiceClient, times(1)).insertUserVector(anyLong(), anyList(), anyList());
     }
@@ -108,14 +108,14 @@ class UserProfileServiceTest {
 
         when(userProfileMapper.selectOne(any(), anyBoolean())).thenReturn(testUser);
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(true);
-        when(jwtUtils.generateToken(any(), anyString())).thenReturn("test-token");
+        when(jwtUtils.generateToken(any(), anyString(), anyBoolean())).thenReturn("test-token");
         when(jwtUtils.getExpiration()).thenReturn(3600000L);
 
         TokenResponse response = userProfileService.login(request);
 
         assertNotNull(response);
         assertEquals("test-token", response.getToken());
-        verify(jwtUtils, times(1)).generateToken(testUser.getUserId(), testUser.getUsername());
+        verify(jwtUtils, times(1)).generateToken(eq(testUser.getUserId()), eq(testUser.getUsername()), anyBoolean());
     }
 
     @Test

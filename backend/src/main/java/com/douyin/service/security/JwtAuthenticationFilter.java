@@ -7,13 +7,16 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * Extracts JWT from Authorization header, validates it,
@@ -39,11 +42,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null && jwtUtils.validateToken(token)) {
             Long userId = jwtUtils.getUserIdFromToken(token);
             String username = jwtUtils.getUsernameFromToken(token);
+            boolean isAdmin = jwtUtils.getIsAdminFromToken(token);
+
+            // Build granted authorities list
+            List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+            if (isAdmin) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            }
 
             // Build an authentication object and place it in the SecurityContext
-            JwtUserDetails userDetails = new JwtUserDetails(userId, username);
+            JwtUserDetails userDetails = new JwtUserDetails(userId, username, isAdmin);
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, Collections.emptyList());
+                    new UsernamePasswordAuthenticationToken(userDetails, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
@@ -58,3 +68,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return null;
     }
 }
+

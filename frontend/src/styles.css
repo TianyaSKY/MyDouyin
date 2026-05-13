@@ -208,6 +208,11 @@ body {
   100% { transform: translateX(-24%); }
 }
 
+@keyframes marquee {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
 @keyframes slide-in-bottom {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }

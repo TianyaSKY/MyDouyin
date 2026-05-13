@@ -61,6 +61,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/videos", "/api/videos/{id}", "/api/videos/{id}/like", "/api/videos/*/like").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/comments/video/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/feed").permitAll()
+                .requestMatchers("/api/dashboard/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.GET, "/uploads/videos/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/uploads/covers/**").permitAll()
                 

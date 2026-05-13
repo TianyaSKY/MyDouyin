@@ -3,6 +3,13 @@ import { login, register, me } from '../api/auth';
 
 const AuthContext = createContext();
 
+// Strip sensitive fields before persisting to localStorage (prevent client-side tampering)
+const safeUserForStorage = (user) => {
+  if (!user) return null;
+  const { is_admin, ...safe } = user;
+  return safe;
+};
+
 export const useAuthContext = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -32,7 +39,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const userData = await me(token);
         setUser(userData);
-        localStorage.setItem('douyin_user', JSON.stringify(userData));
+        localStorage.setItem('douyin_user', JSON.stringify(safeUserForStorage(userData)));
       } catch (err) {
         // Token is invalid, clear it
         localStorage.removeItem('douyin_token');
@@ -57,7 +64,7 @@ export const AuthProvider = ({ children }) => {
       const data = await login(username, password);
       localStorage.setItem('douyin_token', data.token);
       if (data.user) {
-        localStorage.setItem('douyin_user', JSON.stringify(data.user));
+        localStorage.setItem('douyin_user', JSON.stringify(safeUserForStorage(data.user)));
         setUser(data.user);
       }
       setToken(data.token);
@@ -78,7 +85,7 @@ export const AuthProvider = ({ children }) => {
       const data = await register(username, password, nickname, tags);
       localStorage.setItem('douyin_token', data.token);
       if (data.user) {
-        localStorage.setItem('douyin_user', JSON.stringify(data.user));
+        localStorage.setItem('douyin_user', JSON.stringify(safeUserForStorage(data.user)));
         setUser(data.user);
       }
       setToken(data.token);

@@ -31,9 +31,10 @@ public class JwtUtils {
     /**
      * Generate a token for the given user.
      */
-    public String generateToken(Long userId, String username) {
+    public String generateToken(Long userId, String username, boolean isAdmin) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
+        claims.put("isAdmin", isAdmin);
         return buildToken(claims, username, expiration);
     }
 
@@ -49,6 +50,14 @@ public class JwtUtils {
      */
     public Long getUserIdFromToken(String token) {
         return parseClaims(token).get("userId", Long.class);
+    }
+
+    /**
+     * Extract isAdmin flag from token claims.
+     */
+    public boolean getIsAdminFromToken(String token) {
+        Boolean isAdmin = parseClaims(token).get("isAdmin", Boolean.class);
+        return isAdmin != null && isAdmin;
     }
 
     /**

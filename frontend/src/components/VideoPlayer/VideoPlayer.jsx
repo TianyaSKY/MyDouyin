@@ -23,6 +23,7 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
 
     const watchedMsRef = useRef(0);
     const lastPlaybackSecRef = useRef(0);
+    const clickReportedRef = useRef(false);
 
     const resetWatchSession = useCallback(() => {
         watchedMsRef.current = 0;
@@ -59,10 +60,16 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
 
         if (isActive) {
             resetWatchSession();
+            clickReportedRef.current = false;
             const playPromise = videoEl.play();
             if (playPromise !== undefined) {
                 playPromise.then(_ => {
                     setPlaying(true);
+                    // Report CLICK once per video session (user engaged with this video)
+                    if (!clickReportedRef.current) {
+                        track('CLICK', video.id);
+                        clickReportedRef.current = true;
+                    }
                 }).catch(error => {
                     console.log("Auto-play prevented:", error);
                     setPlaying(false);
@@ -73,6 +80,7 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
             setPlaying(false);
             videoEl.currentTime = 0;
             resetWatchSession();
+            clickReportedRef.current = false;
         }
 
         return () => {

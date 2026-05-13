@@ -63,6 +63,7 @@ public class RedisConfig {
         cacheConfigs.put("videoDetail", defaultConfig.entryTtl(Duration.ofMinutes(10)));
         cacheConfigs.put("videoTotalStats", defaultConfig.entryTtl(Duration.ofMinutes(5)));
         cacheConfigs.put("authorTotalLikes", defaultConfig.entryTtl(Duration.ofMinutes(5)));
+        cacheConfigs.put("dashboard", defaultConfig.entryTtl(Duration.ofSeconds(60)));
 
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(defaultConfig)

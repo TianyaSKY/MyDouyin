@@ -12,9 +12,11 @@ public class JwtUserDetails {
 
     private final Long userId;
     private final String username;
+    private final boolean isAdmin;
 
     @Override
     public String toString() {
-        return "JwtUserDetails{userId=" + userId + ", username='" + username + "'}";
+        return "JwtUserDetails{userId=" + userId + ", username='" + username + "', isAdmin=" + isAdmin + "}";
     }
 }
+

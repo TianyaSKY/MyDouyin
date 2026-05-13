@@ -1,8 +1,12 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, User, Plus } from 'lucide-react';
+import { Home, User, Plus, BarChart3 } from 'lucide-react';
+import { useAuthContext } from '../../contexts/AuthContext';
 
 const BottomNavigation = ({ onUpload }) => {
+    const { user } = useAuthContext();
+    const isAdmin = user && user.is_admin === 1;
+
     return (
         <div className="dy-nav">
             <NavLink
@@ -27,6 +31,22 @@ const BottomNavigation = ({ onUpload }) => {
                     <Plus size={18} strokeWidth={3} className="text-black" />
                 </div>
             </div>
+
+            {isAdmin && (
+                <NavLink
+                    to="/dashboard"
+                    className={({ isActive }) =>
+                        `dy-nav-item ${isActive ? 'dy-nav-item--active' : ''}`
+                    }
+                >
+                    {({ isActive }) => (
+                        <>
+                            <BarChart3 size={22} strokeWidth={isActive ? 2.8 : 2} />
+                            <span className="dy-nav-label">数据</span>
+                        </>
+                    )}
+                </NavLink>
+            )}
 
             <NavLink
                 to="/me"

@@ -7,6 +7,7 @@ import SingleVideoPage from './components/Feed/SingleVideoPage';
 import BottomNavigation from './components/Layout/BottomNavigation';
 import ProfilePage from './components/Profile/ProfilePage';
 import UploadModal from './components/Upload/UploadModal';
+import DashboardLayout from './components/Dashboard/DashboardLayout';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -25,6 +26,33 @@ const ProtectedRoute = ({ children }) => {
 
   if (!token) {
     return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+// Admin Route Component
+const AdminRoute = ({ children }) => {
+  const { token, checkingAuth, user } = useAuthContext();
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-dark">
+        <div className="text-center">
+          <div className="loading-spinner mx-auto mb-4" />
+          <p className="text-gray-400">正在验证权限...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!user || user.is_admin !== 1) {
+    // Redirect to home if not admin
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -94,6 +122,14 @@ function AppContent() {
                 <UploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
               </>
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <AdminRoute>
+              <DashboardLayout />
+            </AdminRoute>
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
