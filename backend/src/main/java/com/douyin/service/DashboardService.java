@@ -75,4 +75,37 @@ public interface DashboardService {
      * 最近事件列表。
      */
     List<RecentEventDTO> getRecentEvents(int limit);
+
+    // ==================== 评论与情感分析 ====================
+
+    /**
+     * 评论与情感概览 KPI。
+     */
+    CommentOverviewDTO getCommentOverview();
+
+    /**
+     * 评论趋势（近 N 天每日评论数）。
+     */
+    List<CommentTrendDTO> getCommentTrend(int days);
+
+    /**
+     * 情感分布（正面/中性/负面）。
+     */
+    List<SentimentDistDTO> getSentimentDistribution(int days);
+
+    /**
+     * 每日情感趋势。
+     */
+    List<SentimentTrendDTO> getSentimentTrend(int days);
+
+    /**
+     * 评论最多的视频排行 Top N。
+     */
+    List<TopCommentedVideoDTO> getTopCommentedVideos(int limit);
+
+    /**
+     * 最新评论列表（含情感数据）。
+     */
+    List<RecentCommentDTO> getRecentComments(int limit);
 }
+

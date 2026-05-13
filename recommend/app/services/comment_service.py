@@ -1,22 +1,27 @@
 """
 评论偏好计算服务
 
-通过分析评论内容与视频内容的相关性来计算用户对视频的喜好程度。
+通过深度学习情感分析模型（Erlangshen-Roberta-110M-Sentiment）分析评论内容，
+结合用户-视频向量相似度，计算用户对视频的喜好程度。
+
 核心逻辑：
-1. 获取视频的 embedding 向量
-2. 基于评论内容特征（长度、情感词、关键词）计算基础偏好分
-3. 结合用户向量与视频向量的余弦相似度
-4. 加权融合得到最终偏好分数
+1. 使用 BERT 模型进行情感分析（替代关键词匹配）
+2. 结合用户向量与视频向量的余弦相似度
+3. 加权融合得到最终偏好分数
+4. 返回情感分数供用户向量计算使用
 """
 
 import logging
 import math
 import re
-from typing import Optional
+from typing import Optional, Tuple
 
+from app.models.sentiment_model import sentiment_model
 from app.services import milvus_service
 
 logger = logging.getLogger(__name__)
+
+# ── 关键词兜底方案（当 DL 模型不可用时使用）──
 
 # 正面情感关键词（中文）
 POSITIVE_KEYWORDS = {
@@ -53,8 +58,8 @@ class CommentPreferenceService:
             if not content or not content.strip():
                 return 0.5  # 空评论给中性分
 
-            # ── 1. 评论文本特征分析 ──
-            text_score = CommentPreferenceService._analyze_text(content)
+            # ── 1. 情感分析（优先使用 DL 模型）──
+            text_score = CommentPreferenceService._analyze_sentiment(content)
 
             # ── 2. 用户-视频向量相似度 ──
             vector_score = CommentPreferenceService._compute_vector_similarity(
@@ -93,9 +98,51 @@ class CommentPreferenceService:
             return 0.5  # 异常时返回中性分
 
     @staticmethod
-    def _analyze_text(content: str) -> float:
+    def compute_preference_with_sentiment(
+        user_id: int,
+        video_id: int,
+        comment_id: int,
+        content: str,
+    ) -> Tuple[float, float, float]:
         """
-        基于文本特征分析情感倾向，返回 0~1 分数。
+        计算评论偏好并同时返回情感分数和评论权重。
+
+        Returns:
+            (preference_score, sentiment_score, comment_weight)
+            - preference_score: 0.0 ~ 1.0 的综合偏好分数
+            - sentiment_score: 0.0 ~ 1.0 的情感分数（正面 → 1.0）
+            - comment_weight: 映射后的行为权重（用于用户向量计算）
+        """
+        preference_score = CommentPreferenceService.compute_preference(
+            user_id, video_id, comment_id, content
+        )
+
+        sentiment_score = CommentPreferenceService._analyze_sentiment(
+            content if content else ""
+        )
+        comment_weight = sentiment_model.sentiment_to_weight(sentiment_score)
+
+        return preference_score, sentiment_score, comment_weight
+
+    @staticmethod
+    def _analyze_sentiment(content: str) -> float:
+        """
+        情感分析：优先使用 DL 模型，不可用时回退到关键词匹配。
+
+        Returns:
+            sentiment_score: 0.0 ~ 1.0
+        """
+        if sentiment_model.available:
+            return sentiment_model.predict(content)
+
+        # ── 兜底：关键词匹配 ──
+        logger.debug("Using keyword-based sentiment fallback")
+        return CommentPreferenceService._analyze_text_by_keywords(content)
+
+    @staticmethod
+    def _analyze_text_by_keywords(content: str) -> float:
+        """
+        基于关键词的情感分析（兜底方案），返回 0~1 分数。
         """
         score = 0.5  # 中性起点
 

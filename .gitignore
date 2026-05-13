@@ -50,3 +50,13 @@ nul
 
 node_modules/
 .npm-cache/
+
+# Model weights & HuggingFace cache
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+*.gguf
+recommend/models/
+.cache/huggingface/

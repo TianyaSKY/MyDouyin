@@ -415,6 +415,20 @@ public class RecommendServiceClient {
      * 计算评论偏好分数
      */
     public Double computeCommentPreference(Long userId, Long videoId, Long commentId, String content) {
+        CommentPreferenceResponse result = computeCommentPreferenceWithSentiment(userId, videoId, commentId, content);
+        return result != null ? result.getPreferenceScore() : null;
+    }
+
+    /**
+     * 计算评论偏好分数（含 DL 情感分析结果）
+     *
+     * 返回完整的 CommentPreferenceResponse，包含：
+     * - preferenceScore: 综合偏好分
+     * - sentimentScore: 情感分析分数 (0=负面, 1=正面)
+     * - commentWeight: 映射后的行为权重 (用于用户向量计算)
+     */
+    public CommentPreferenceResponse computeCommentPreferenceWithSentiment(
+            Long userId, Long videoId, Long commentId, String content) {
         try {
             String url = recommendServiceUrl + "/api/comment/preference";
 
@@ -433,9 +447,12 @@ public class RecommendServiceClient {
             );
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                log.info("Computed comment preference for userId={}, videoId={}, commentId={}, score={}",
-                        userId, videoId, commentId, response.getBody().getPreferenceScore());
-                return response.getBody().getPreferenceScore();
+                CommentPreferenceResponse body = response.getBody();
+                log.info("Computed comment preference with sentiment: userId={}, videoId={}, commentId={}, " +
+                         "preferenceScore={}, sentimentScore={}, commentWeight={}",
+                        userId, videoId, commentId,
+                        body.getPreferenceScore(), body.getSentimentScore(), body.getCommentWeight());
+                return body;
             }
 
             log.warn("Failed to compute comment preference for userId={}, videoId={}", userId, videoId);
@@ -503,9 +520,17 @@ public class RecommendServiceClient {
 
     @Data
     public static class CommentPreferenceResponse {
+        @com.fasterxml.jackson.annotation.JsonProperty("user_id")
         private Long userId;
+        @com.fasterxml.jackson.annotation.JsonProperty("video_id")
         private Long videoId;
+        @com.fasterxml.jackson.annotation.JsonProperty("comment_id")
         private Long commentId;
+        @com.fasterxml.jackson.annotation.JsonProperty("preference_score")
         private Double preferenceScore;
+        @com.fasterxml.jackson.annotation.JsonProperty("sentiment_score")
+        private Double sentimentScore;
+        @com.fasterxml.jackson.annotation.JsonProperty("comment_weight")
+        private Double commentWeight;
     }
 }

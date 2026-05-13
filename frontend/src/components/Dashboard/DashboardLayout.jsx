@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Activity, LayoutDashboard, Users, Film, Sparkles } from 'lucide-react';
+import { ArrowLeft, Activity, LayoutDashboard, Users, Film, Sparkles, MessageSquare } from 'lucide-react';
 import OverviewCards from './OverviewCards';
 import UserAnalytics from './UserAnalytics';
 import ContentAnalytics from './ContentAnalytics';
@@ -9,12 +9,14 @@ import RealtimeFeed from './RealtimeFeed';
 import UserInsightsTab from './tabs/UserInsightsTab';
 import ContentOpsTab from './tabs/ContentOpsTab';
 import RecommendTab from './tabs/RecommendTab';
+import CommentSentimentTab from './tabs/CommentSentimentTab';
 
 const TABS = [
   { key: 'overview', label: '数据总览', icon: LayoutDashboard },
   { key: 'users', label: '用户洞察', icon: Users },
   { key: 'content', label: '内容运营', icon: Film },
   { key: 'recommend', label: '推荐效果', icon: Sparkles },
+  { key: 'comments', label: '评论情感', icon: MessageSquare },
 ];
 
 export default function DashboardLayout() {
@@ -99,6 +101,7 @@ export default function DashboardLayout() {
         {activeTab === 'users' && <UserInsightsTab />}
         {activeTab === 'content' && <ContentOpsTab />}
         {activeTab === 'recommend' && <RecommendTab />}
+        {activeTab === 'comments' && <CommentSentimentTab />}
       </main>
     </div>
   );

@@ -124,4 +124,48 @@ public class DashboardController {
             @Parameter(description = "返回数量，默认 20") @RequestParam(defaultValue = "20") int limit) {
         return Result.ok(dashboardService.getRecentEvents(limit));
     }
+
+    // ==================== 评论与情感分析 ====================
+
+    @Operation(summary = "评论概览", description = "评论数、情感分析统计")
+    @GetMapping("/comments/overview")
+    public Result<CommentOverviewDTO> getCommentOverview() {
+        return Result.ok(dashboardService.getCommentOverview());
+    }
+
+    @Operation(summary = "评论趋势", description = "近 N 天每日评论数")
+    @GetMapping("/comments/trend")
+    public Result<List<CommentTrendDTO>> getCommentTrend(
+            @Parameter(description = "查询天数，默认 30") @RequestParam(defaultValue = "30") int days) {
+        return Result.ok(dashboardService.getCommentTrend(days));
+    }
+
+    @Operation(summary = "情感分布", description = "正面/中性/负面评论数")
+    @GetMapping("/comments/sentiment/distribution")
+    public Result<List<SentimentDistDTO>> getSentimentDistribution(
+            @Parameter(description = "查询天数，默认 30") @RequestParam(defaultValue = "30") int days) {
+        return Result.ok(dashboardService.getSentimentDistribution(days));
+    }
+
+    @Operation(summary = "情感趋势", description = "每日正面/负面评论趋势")
+    @GetMapping("/comments/sentiment/trend")
+    public Result<List<SentimentTrendDTO>> getSentimentTrend(
+            @Parameter(description = "查询天数，默认 30") @RequestParam(defaultValue = "30") int days) {
+        return Result.ok(dashboardService.getSentimentTrend(days));
+    }
+
+    @Operation(summary = "热评视频排行", description = "评论数最多的视频 Top N")
+    @GetMapping("/comments/videos/top")
+    public Result<List<TopCommentedVideoDTO>> getTopCommentedVideos(
+            @Parameter(description = "返回数量，默认 10") @RequestParam(defaultValue = "10") int limit) {
+        return Result.ok(dashboardService.getTopCommentedVideos(limit));
+    }
+
+    @Operation(summary = "最新评论列表", description = "最近评论（含情感分析数据）")
+    @GetMapping("/comments/recent")
+    public Result<List<RecentCommentDTO>> getRecentComments(
+            @Parameter(description = "返回数量，默认 20") @RequestParam(defaultValue = "20") int limit) {
+        return Result.ok(dashboardService.getRecentComments(limit));
+    }
 }
+

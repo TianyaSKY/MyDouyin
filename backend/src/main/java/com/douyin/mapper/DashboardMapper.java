@@ -176,4 +176,127 @@ public interface DashboardMapper {
             "ORDER BY e.ts DESC " +
             "LIMIT #{limit}")
     List<RecentEventDTO> getRecentEvents(@Param("limit") int limit);
+
+    // ==================== 评论与情感分析 ====================
+
+    /** 总评论数（活跃状态） */
+    @Select("SELECT COUNT(*) FROM video_comments WHERE status = 1")
+    Long countTotalComments();
+
+    /** 今日新增评论数 */
+    @Select("SELECT COUNT(*) FROM video_comments WHERE status = 1 AND DATE(created_at) = #{date}")
+    Long countTodayComments(@Param("date") LocalDate date);
+
+    /** 已进行情感分析的评论数（ctx 里包含 sentiment_score 的 COMMENT 事件） */
+    @Select("SELECT COUNT(*) FROM user_events " +
+            "WHERE event_type = 'comment' " +
+            "AND JSON_TYPE(JSON_EXTRACT(ctx, '$.sentiment_score')) != 'NULL' " +
+            "AND JSON_EXTRACT(ctx, '$.sentiment_score') IS NOT NULL")
+    Long countAnalyzedComments();
+
+    /** 正面评论数 (sentiment_score >= 0.6) */
+    @Select("SELECT COUNT(*) FROM user_events " +
+            "WHERE event_type = 'comment' " +
+            "AND JSON_TYPE(JSON_EXTRACT(ctx, '$.sentiment_score')) != 'NULL' " +
+            "AND CAST(JSON_EXTRACT(ctx, '$.sentiment_score') AS DECIMAL(10,6)) >= 0.6")
+    Long countPositiveComments();
+
+    /** 负面评论数 (sentiment_score < 0.4) */
+    @Select("SELECT COUNT(*) FROM user_events " +
+            "WHERE event_type = 'comment' " +
+            "AND JSON_TYPE(JSON_EXTRACT(ctx, '$.sentiment_score')) != 'NULL' " +
+            "AND CAST(JSON_EXTRACT(ctx, '$.sentiment_score') AS DECIMAL(10,6)) < 0.4")
+    Long countNegativeComments();
+
+    /** 平均情感分 */
+    @Select("SELECT COALESCE(AVG(CAST(JSON_EXTRACT(ctx, '$.sentiment_score') AS DECIMAL(10,6))), 0) " +
+            "FROM user_events " +
+            "WHERE event_type = 'comment' " +
+            "AND JSON_TYPE(JSON_EXTRACT(ctx, '$.sentiment_score')) != 'NULL'")
+    Double avgSentimentScore();
+
+    /** 评论用户数 */
+    @Select("SELECT COUNT(DISTINCT user_id) FROM video_comments WHERE status = 1")
+    Long countCommentUsers();
+
+    /** 被评论视频数 */
+    @Select("SELECT COUNT(DISTINCT video_id) FROM video_comments WHERE status = 1")
+    Long countCommentedVideos();
+
+    /** 评论趋势（每日评论数） */
+    @Select("SELECT DATE(created_at) AS date, COUNT(*) AS count " +
+            "FROM video_comments " +
+            "WHERE status = 1 AND created_at >= #{startDate} " +
+            "GROUP BY DATE(created_at) " +
+            "ORDER BY date")
+    List<CommentTrendDTO> getCommentTrend(@Param("startDate") LocalDateTime startDate);
+
+    /** 情感分布（正面/中性/负面） */
+    @Select("SELECT " +
+            "CASE " +
+            "  WHEN CAST(JSON_EXTRACT(ctx, '$.sentiment_score') AS DECIMAL(10,6)) >= 0.6 THEN 'positive' " +
+            "  WHEN CAST(JSON_EXTRACT(ctx, '$.sentiment_score') AS DECIMAL(10,6)) < 0.4 THEN 'negative' " +
+            "  ELSE 'neutral' " +
+            "END AS label, " +
+            "COUNT(*) AS count " +
+            "FROM user_events " +
+            "WHERE event_type = 'comment' " +
+            "AND JSON_TYPE(JSON_EXTRACT(ctx, '$.sentiment_score')) != 'NULL' " +
+            "AND ts >= #{startDate} " +
+            "GROUP BY label")
+    List<SentimentDistDTO> getSentimentDistribution(@Param("startDate") LocalDateTime startDate);
+
+    /** 每日情感趋势（正面数、负面数、平均分） */
+    @Select("SELECT DATE(ts) AS date, " +
+            "SUM(CASE WHEN CAST(JSON_EXTRACT(ctx, '$.sentiment_score') AS DECIMAL(10,6)) >= 0.6 THEN 1 ELSE 0 END) AS positive, " +
+            "SUM(CASE WHEN CAST(JSON_EXTRACT(ctx, '$.sentiment_score') AS DECIMAL(10,6)) < 0.4 THEN 1 ELSE 0 END) AS negative, " +
+            "AVG(CAST(JSON_EXTRACT(ctx, '$.sentiment_score') AS DECIMAL(10,6))) AS avgScore " +
+            "FROM user_events " +
+            "WHERE event_type = 'comment' " +
+            "AND JSON_TYPE(JSON_EXTRACT(ctx, '$.sentiment_score')) != 'NULL' " +
+            "AND ts >= #{startDate} " +
+            "GROUP BY DATE(ts) " +
+            "ORDER BY date")
+    List<SentimentTrendDTO> getSentimentTrend(@Param("startDate") LocalDateTime startDate);
+
+    /** 评论最多的视频排行 Top N */
+    @Select("SELECT c.video_id AS videoId, v.title, v.cover_url AS coverUrl, " +
+            "u.nickname AS authorName, " +
+            "COUNT(DISTINCT c.id) AS commentCount, " +
+            "AVG(CASE WHEN JSON_TYPE(JSON_EXTRACT(e.ctx, '$.sentiment_score')) != 'NULL' " +
+            "    THEN CAST(JSON_EXTRACT(e.ctx, '$.sentiment_score') AS DECIMAL(10,6)) " +
+            "    ELSE NULL END) AS avgSentiment " +
+            "FROM video_comments c " +
+            "JOIN videos v ON c.video_id = v.id " +
+            "LEFT JOIN users u ON v.author_id = u.user_id " +
+            "LEFT JOIN user_events e ON e.video_id = c.video_id " +
+            "AND e.event_type = 'comment' " +
+            "WHERE c.status = 1 " +
+            "GROUP BY c.video_id, v.title, v.cover_url, u.nickname " +
+            "ORDER BY commentCount DESC " +
+            "LIMIT #{limit}")
+    List<TopCommentedVideoDTO> getTopCommentedVideos(@Param("limit") int limit);
+
+    /** 最新评论列表（含情感数据） */
+    @Select("SELECT c.id AS commentId, c.user_id AS userId, u.nickname, u.avatar_url AS avatarUrl, " +
+            "c.video_id AS videoId, v.title AS videoTitle, c.content, " +
+            "CASE WHEN e.id IS NOT NULL AND JSON_TYPE(JSON_EXTRACT(e.ctx, '$.sentiment_score')) != 'NULL' " +
+            "    THEN CAST(JSON_EXTRACT(e.ctx, '$.sentiment_score') AS DECIMAL(10,6)) " +
+            "    ELSE NULL END AS sentimentScore, " +
+            "CASE WHEN e.id IS NOT NULL AND JSON_TYPE(JSON_EXTRACT(e.ctx, '$.preference_score')) != 'NULL' " +
+            "    THEN CAST(JSON_EXTRACT(e.ctx, '$.preference_score') AS DECIMAL(10,6)) " +
+            "    ELSE NULL END AS preferenceScore, " +
+            "c.created_at AS createdAt " +
+            "FROM video_comments c " +
+            "LEFT JOIN users u ON c.user_id = u.user_id " +
+            "LEFT JOIN videos v ON c.video_id = v.id " +
+            "LEFT JOIN user_events e ON e.user_id = c.user_id AND e.video_id = c.video_id " +
+            "AND e.event_type = 'comment' " +
+            "AND JSON_TYPE(JSON_EXTRACT(e.ctx, '$.commentId')) != 'NULL' " +
+            "AND CAST(JSON_EXTRACT(e.ctx, '$.commentId') AS UNSIGNED) = c.id " +
+            "WHERE c.status = 1 " +
+            "ORDER BY c.created_at DESC " +
+            "LIMIT #{limit}")
+    List<RecentCommentDTO> getRecentComments(@Param("limit") int limit);
 }
+

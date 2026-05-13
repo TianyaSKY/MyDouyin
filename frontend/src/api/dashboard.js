@@ -16,3 +16,11 @@ export const getFunnel = (days = 7) => apiFetch(`/api/dashboard/funnel?days=${da
 export const getEventHeatmap = (days = 7) => apiFetch(`/api/dashboard/heatmap?days=${days}`).then(unwrap);
 export const getCtrTrend = (days = 7) => apiFetch(`/api/dashboard/recommend/ctr?days=${days}`).then(unwrap);
 export const getRecentEvents = (limit = 20) => apiFetch(`/api/dashboard/events/recent?limit=${limit}`).then(unwrap);
+
+// ==================== 评论与情感分析 ====================
+export const getCommentOverview = () => apiFetch('/api/dashboard/comments/overview').then(unwrap);
+export const getCommentTrend = (days = 30) => apiFetch(`/api/dashboard/comments/trend?days=${days}`).then(unwrap);
+export const getSentimentDistribution = (days = 30) => apiFetch(`/api/dashboard/comments/sentiment/distribution?days=${days}`).then(unwrap);
+export const getSentimentTrend = (days = 30) => apiFetch(`/api/dashboard/comments/sentiment/trend?days=${days}`).then(unwrap);
+export const getTopCommentedVideos = (limit = 10) => apiFetch(`/api/dashboard/comments/videos/top?limit=${limit}`).then(unwrap);
+export const getRecentComments = (limit = 20) => apiFetch(`/api/dashboard/comments/recent?limit=${limit}`).then(unwrap);

@@ -6,6 +6,7 @@ import com.douyin.entity.UserEvent;
 import com.douyin.entity.dto.CommentEventMessage;
 import com.douyin.entity.enums.EventType;
 import com.douyin.mapper.UserCommentPreferenceMapper;
+import com.douyin.service.UserEmbeddingService;
 import com.douyin.service.UserEventService;
 import com.douyin.service.VideoStatsDailyService;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +24,9 @@ import java.util.Map;
  * Consumes comment events from RabbitMQ.
  * 1. Records a user_event (type = COMMENT)
  * 2. Increments comment_cnt in video_daily_stats
- * 3. Calls recommend service to compute preference score
+ * 3. Calls recommend service to compute preference score (with DL sentiment analysis)
  * 4. Writes preference score back to user_comment_preferences table
+ * 5. Triggers user vector update with sentiment-derived weight
  */
 @Slf4j
 @Component
@@ -35,6 +37,7 @@ public class CommentEventConsumer {
     private final VideoStatsDailyService videoStatsDailyService;
     private final RecommendServiceClient recommendServiceClient;
     private final UserCommentPreferenceMapper userCommentPreferenceMapper;
+    private final UserEmbeddingService userEmbeddingService;
 
     @RabbitListener(queues = RabbitMQConfig.COMMENT_QUEUE_NAME)
     public void handleCommentEvent(CommentEventMessage message) {
@@ -61,7 +64,6 @@ public class CommentEventConsumer {
                 ctx.put("parentId", message.getParentId());
                 ctx.put("isReply", true);
             }
-            event.setCtx(ctx);
 
             if (message.getCreatedAtMs() != null) {
                 event.setTs(LocalDateTime.ofInstant(
@@ -71,8 +73,6 @@ public class CommentEventConsumer {
                 event.setTs(LocalDateTime.now(ZoneId.of("Asia/Shanghai")));
             }
 
-            userEventService.save(event);
-
             // 2. Increment comment_cnt in video_daily_stats
             videoStatsDailyService.incrementStats(
                     message.getVideoId(),
@@ -80,27 +80,46 @@ public class CommentEventConsumer {
                     0
             );
 
-            // 3. Call recommend service to compute preference score
-            Double preferenceScore = recommendServiceClient.computeCommentPreference(
-                    message.getUserId(),
-                    message.getVideoId(),
-                    message.getCommentId(),
-                    message.getContent()
-            );
+            // 3. Call recommend service to compute preference score (includes DL sentiment analysis)
+            RecommendServiceClient.CommentPreferenceResponse preferenceResult =
+                    recommendServiceClient.computeCommentPreferenceWithSentiment(
+                            message.getUserId(),
+                            message.getVideoId(),
+                            message.getCommentId(),
+                            message.getContent()
+                    );
 
-            // 4. Write preference score back to DB
-            if (preferenceScore != null) {
+            // 4. Store sentiment data in event ctx and save event
+            if (preferenceResult != null) {
+                ctx.put("sentiment_score", preferenceResult.getSentimentScore());
+                ctx.put("comment_weight", preferenceResult.getCommentWeight());
+                ctx.put("preference_score", preferenceResult.getPreferenceScore());
+
+                log.info("DL sentiment analysis: userId={}, videoId={}, commentId={}, " +
+                         "sentimentScore={}, commentWeight={}, preferenceScore={}",
+                        message.getUserId(), message.getVideoId(), message.getCommentId(),
+                        preferenceResult.getSentimentScore(),
+                        preferenceResult.getCommentWeight(),
+                        preferenceResult.getPreferenceScore());
+
+                // Write preference score to DB
                 UserCommentPreference preference = new UserCommentPreference();
                 preference.setUserId(message.getUserId());
                 preference.setVideoId(message.getVideoId());
                 preference.setCommentId(message.getCommentId());
-                preference.setPreferenceScore(preferenceScore);
+                preference.setPreferenceScore(preferenceResult.getPreferenceScore());
                 userCommentPreferenceMapper.insert(preference);
-
-                log.info("Preference score saved: userId={}, videoId={}, commentId={}, score={}",
-                        message.getUserId(), message.getVideoId(),
-                        message.getCommentId(), preferenceScore);
             }
+
+            event.setCtx(ctx);
+            userEventService.save(event);
+
+            // 5. Trigger user vector update with sentiment-derived weight
+            userEmbeddingService.updateRealtimeVector(
+                    message.getUserId(),
+                    message.getVideoId(),
+                    EventType.COMMENT
+            );
 
         } catch (Exception e) {
             log.error("Failed to process CommentEvent: {}", message, e);

@@ -46,7 +46,8 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
         EventType.CLICK, 0.3,
         EventType.LIKE, 1.0,
         EventType.FINISH, 1.5,
-        EventType.SHARE, 2.0
+        EventType.SHARE, 2.0,
+        EventType.COMMENT, 0.5
     );
 
     @Override
@@ -182,6 +183,18 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
                 eventMap.put("timestamp", DateTimeFormatter.ISO_INSTANT.format(eventInstant));
                 eventMap.put("timestamp_ms", eventInstant.toEpochMilli());
                 eventMap.put("video_embedding", videoVec);
+
+                // 评论事件：从 ctx 中读取情感分析动态权重
+                if (event.getEventType() == EventType.COMMENT && event.getCtx() != null) {
+                    Object commentWeight = event.getCtx().get("comment_weight");
+                    if (commentWeight instanceof Number) {
+                        eventMap.put("comment_weight", ((Number) commentWeight).doubleValue());
+                    }
+                    Object sentimentScore = event.getCtx().get("sentiment_score");
+                    if (sentimentScore instanceof Number) {
+                        eventMap.put("sentiment_score", ((Number) sentimentScore).doubleValue());
+                    }
+                }
                 
                 eventData.add(eventMap);
             }
@@ -302,16 +315,39 @@ public class UserEmbeddingServiceImpl implements UserEmbeddingService {
      */
     private Map<Long, List<Float>> getVideoVectorsFromService(List<Long> videoIds) {
         try {
-            // 调用 FastAPI 批量获取视频向量
-            Map<Long, List<Float>> vectors = recommendServiceClient.generateVideoEmbeddingsBatch(videoIds);
-            
-            if (vectors != null && !vectors.isEmpty()) {
+            // 1. 优先从 Milvus 查询已存储的视频向量（不需要联网）
+            Map<Long, List<Float>> stored = recommendServiceClient.getStoredVideoEmbeddings(videoIds);
+            Map<Long, List<Float>> vectors = stored != null ? new HashMap<>(stored) : new HashMap<>();
+
+            // 2. 检查哪些视频还没有向量
+            List<Long> missingIds = videoIds.stream()
+                .filter(id -> !vectors.containsKey(id)
+                            || vectors.get(id) == null
+                            || vectors.get(id).size() != VECTOR_DIM)
+                .collect(Collectors.toList());
+
+            if (missingIds.isEmpty()) {
+                log.debug("All {} video vectors found in Milvus", videoIds.size());
                 return vectors;
             }
 
-            // 如果服务不可用，使用兜底方案
-            log.warn("Recommend service unavailable, using fallback for video vectors");
-            return generateFallbackVideoVectors(videoIds);
+            // 3. 只对缺失的视频调用 DashScope 生成向量
+            log.info("Found {}/{} video vectors in Milvus, generating {} missing ones",
+                vectors.size(), videoIds.size(), missingIds.size());
+
+            try {
+                Map<Long, List<Float>> generated =
+                    recommendServiceClient.generateVideoEmbeddingsBatch(missingIds);
+                if (generated != null) {
+                    vectors.putAll(generated);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to generate missing video vectors via DashScope, "
+                         + "using fallback: {}", e.getMessage());
+                vectors.putAll(generateFallbackVideoVectors(missingIds));
+            }
+
+            return vectors;
 
         } catch (Exception e) {
             log.error("Error getting video vectors from service", e);

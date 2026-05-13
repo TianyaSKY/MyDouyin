@@ -183,4 +183,6 @@ class CommentPreferenceResponse(BaseModel):
     video_id: int
     comment_id: int
     preference_score: float
+    sentiment_score: float = Field(0.5, description="情感分数 (0=负面, 1=正面)")
+    comment_weight: float = Field(0.3, description="评论行为权重 (用于用户向量计算)")
 

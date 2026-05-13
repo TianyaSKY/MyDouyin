@@ -21,7 +21,8 @@ class UserEmbeddingService:
         "CLICK": 0.3,
         "LIKE": 1.0,
         "FINISH": 1.5,
-        "SHARE": 2.0
+        "SHARE": 2.0,
+        "COMMENT": 0.5  # 评论默认权重，实际会被情感分析动态覆盖
     }
 
     @staticmethod
@@ -75,7 +76,15 @@ class UserEmbeddingService:
                 
                 # 计算权重：行为权重 × 时间衰减
                 event_type = event.get("event_type", "CLICK")
-                behavior_weight = UserEmbeddingService.EVENT_WEIGHTS.get(event_type, 0.3)
+
+                # 评论事件使用动态权重（基于情感分析分数）
+                if event_type == "COMMENT":
+                    behavior_weight = event.get(
+                        "comment_weight",
+                        UserEmbeddingService.EVENT_WEIGHTS.get("COMMENT", 0.5)
+                    )
+                else:
+                    behavior_weight = UserEmbeddingService.EVENT_WEIGHTS.get(event_type, 0.3)
                 
                 # 时间衰减
                 event_time_utc = UserEmbeddingService._parse_event_time(event)

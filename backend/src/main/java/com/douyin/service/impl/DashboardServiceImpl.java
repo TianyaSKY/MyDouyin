@@ -160,6 +160,57 @@ public class DashboardServiceImpl implements DashboardService {
         return dashboardMapper.getRecentEvents(limit);
     }
 
+    // ==================== 评论与情感分析 ====================
+
+    @Override
+    @Cacheable(cacheNames = "dashboard", key = "'commentOverview'")
+    public CommentOverviewDTO getCommentOverview() {
+        LocalDate today = LocalDate.now();
+        return CommentOverviewDTO.builder()
+                .totalComments(dashboardMapper.countTotalComments())
+                .todayComments(dashboardMapper.countTodayComments(today))
+                .analyzedComments(dashboardMapper.countAnalyzedComments())
+                .positiveComments(dashboardMapper.countPositiveComments())
+                .negativeComments(dashboardMapper.countNegativeComments())
+                .avgSentimentScore(dashboardMapper.avgSentimentScore())
+                .commentUsers(dashboardMapper.countCommentUsers())
+                .commentedVideos(dashboardMapper.countCommentedVideos())
+                .build();
+    }
+
+    @Override
+    @Cacheable(cacheNames = "dashboard", key = "'commentTrend:' + #days")
+    public List<CommentTrendDTO> getCommentTrend(int days) {
+        LocalDateTime startDate = LocalDate.now().minusDays(days).atStartOfDay();
+        return dashboardMapper.getCommentTrend(startDate);
+    }
+
+    @Override
+    @Cacheable(cacheNames = "dashboard", key = "'sentimentDist:' + #days")
+    public List<SentimentDistDTO> getSentimentDistribution(int days) {
+        LocalDateTime startDate = LocalDate.now().minusDays(days).atStartOfDay();
+        return dashboardMapper.getSentimentDistribution(startDate);
+    }
+
+    @Override
+    @Cacheable(cacheNames = "dashboard", key = "'sentimentTrend:' + #days")
+    public List<SentimentTrendDTO> getSentimentTrend(int days) {
+        LocalDateTime startDate = LocalDate.now().minusDays(days).atStartOfDay();
+        return dashboardMapper.getSentimentTrend(startDate);
+    }
+
+    @Override
+    @Cacheable(cacheNames = "dashboard", key = "'topCommentedVideos:' + #limit")
+    public List<TopCommentedVideoDTO> getTopCommentedVideos(int limit) {
+        return dashboardMapper.getTopCommentedVideos(limit);
+    }
+
+    @Override
+    public List<RecentCommentDTO> getRecentComments(int limit) {
+        // 不缓存实时评论，每次查数据库
+        return dashboardMapper.getRecentComments(limit);
+    }
+
     /**
      * 保留 4 位小数。
      */
@@ -167,3 +218,4 @@ public class DashboardServiceImpl implements DashboardService {
         return Math.round(value * 10000.0) / 10000.0;
     }
 }
+
