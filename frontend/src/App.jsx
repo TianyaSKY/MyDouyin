@@ -2,38 +2,61 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuthContext } from './contexts/AuthContext';
 import { LoginPage } from './components/Auth/LoginPage';
+import AdminDashboardPage from './components/Admin/AdminDashboardPage';
 import VideoFeed from './components/Feed/VideoFeed';
 import SingleVideoPage from './components/Feed/SingleVideoPage';
 import BottomNavigation from './components/Layout/BottomNavigation';
 import ProfilePage from './components/Profile/ProfilePage';
 import UploadModal from './components/Upload/UploadModal';
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { token, checkingAuth } = useAuthContext();
+export const isAdminUser = (user) => user?.is_admin === 1;
+
+const AuthLoadingState = () => (
+  <div className="min-h-screen flex items-center justify-center bg-dark">
+    <div className="text-center">
+      <div className="loading-spinner mx-auto mb-4" />
+      <p className="text-gray-400">正在验证登录状态...</p>
+    </div>
+  </div>
+);
+
+const RoleHomeRedirect = () => {
+  const { token, user, checkingAuth } = useAuthContext();
 
   if (checkingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-dark">
-        <div className="text-center">
-          <div className="loading-spinner mx-auto mb-4" />
-          <p className="text-gray-400">正在验证登录状态...</p>
-        </div>
-      </div>
-    );
+    return <AuthLoadingState />;
   }
 
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
+  return <Navigate to={isAdminUser(user) ? '/admin/dashboard' : '/'} replace />;
+};
+
+const ProtectedRoute = ({ children, adminOnly = false }) => {
+  const { token, user, checkingAuth } = useAuthContext();
+
+  if (checkingAuth) {
+    return <AuthLoadingState />;
+  }
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isAdmin = isAdminUser(user);
+  if (adminOnly && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!adminOnly && isAdmin) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   return children;
 };
 
-// Home Page (Placeholder for future feed)
-
-
-// Main App Component
 function AppContent() {
   const [authMode, setAuthMode] = useState('login');
   const { token } = useAuthContext();
@@ -46,10 +69,18 @@ function AppContent() {
           path="/login"
           element={
             token ? (
-              <Navigate to="/" replace />
+              <RoleHomeRedirect />
             ) : (
               <LoginPage mode={authMode} onModeChange={setAuthMode} />
             )
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminDashboardPage />
+            </ProtectedRoute>
           }
         />
         <Route
@@ -96,13 +127,12 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<RoleHomeRedirect />} />
       </Routes>
     </Router>
   );
 }
 
-// Main App Export
 export default function App() {
   return (
     <AuthProvider>

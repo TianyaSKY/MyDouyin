@@ -1,6 +1,7 @@
 package com.douyin.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
@@ -39,6 +40,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle authorization failures from protected business services.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Result<Void> handleAccessDenied(AccessDeniedException ex) {
+        return Result.fail(403, "权限不足");
+    }
+
+    /**
      * Handle unexpected RuntimeException as 500 (do NOT expose internal message).
      */
     @ExceptionHandler(RuntimeException.class)
@@ -47,7 +57,6 @@ public class GlobalExceptionHandler {
         log.error("Unexpected runtime error", ex);
         return Result.fail(500, "服务器内部错误");
     }
-
     /**
      * Client closed connection while streaming resource (common for video seek/skip).
      */

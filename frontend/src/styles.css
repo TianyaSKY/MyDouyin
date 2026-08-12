@@ -5,6 +5,7 @@
 @import './styles/douyin-feed.css';
 @import './styles/share.css';
 @import './styles/comment.css';
+@import './styles/admin-dashboard.css';
 
 @tailwind base;
 @tailwind components;
