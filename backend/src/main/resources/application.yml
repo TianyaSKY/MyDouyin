@@ -54,10 +54,12 @@ logging:
 
 # JWT Configuration
 jwt:
-  secret: d0uy1n-mvp-s3cret-key-pl3ase-change-in-production-at-least-256-bits-long!!
+  secret: ${JWT_SECRET:}
   expiration: 604800000   # 7 days in ms (single token mode)
 
 app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   media-base-url: ${MEDIA_BASE_URL:http://localhost:8081}
   upload:
     base-dir: ../storage

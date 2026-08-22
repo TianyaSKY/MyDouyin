@@ -2,6 +2,7 @@ package com.douyin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.douyin.common.Result;
+import com.douyin.common.util.AuthUtils;
 import com.douyin.entity.UserEvent;
 import com.douyin.entity.enums.EventType;
 import com.douyin.service.UserEventService;
@@ -43,6 +44,9 @@ public class UserEventController {
             @PathVariable Long userId,
             @RequestParam(defaultValue = "1") int current,
             @RequestParam(defaultValue = "20") int size) {
+        if (!canAccess(userId)) {
+            return Result.fail(403, "无权限访问该用户的事件");
+        }
         return Result.ok(userEventService.pageByUserId(userId, current, size));
     }
 
@@ -53,6 +57,9 @@ public class UserEventController {
     public Result<List<UserEvent>> listByUserAndVideo(
             @PathVariable Long userId,
             @PathVariable Long videoId) {
+        if (!canAccess(userId)) {
+            return Result.fail(403, "无权限访问该用户的事件");
+        }
         return Result.ok(userEventService.getByUserAndVideo(userId, videoId));
     }
 
@@ -72,6 +79,11 @@ public class UserEventController {
      */
     @PostMapping
     public Result<UserEvent> create(@Valid @RequestBody UserEvent event) {
+        Long userId = AuthUtils.getCurrentUserId();
+        if (userId == null) {
+            return Result.fail(401, "未登录");
+        }
+        event.setUserId(userId);
         normalizeEventTime(event);
         // Send to MQ for async processing (save raw log + aggregate stats)
         rabbitTemplate.convertAndSend(
@@ -87,7 +99,12 @@ public class UserEventController {
      */
     @PostMapping("/batch")
     public Result<Void> batchCreate(@Valid @RequestBody List<UserEvent> events) {
+        Long userId = AuthUtils.getCurrentUserId();
+        if (userId == null) {
+            return Result.fail(401, "未登录");
+        }
         for (UserEvent event : events) {
+            event.setUserId(userId);
             normalizeEventTime(event);
             rabbitTemplate.convertAndSend(
                     RabbitMQConfig.EXCHANGE_NAME,
@@ -103,8 +120,23 @@ public class UserEventController {
      */
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
+        if (!AuthUtils.isAdmin()) {
+            return Result.fail(403, "无权限删除事件");
+        }
+        UserEvent event = userEventService.getById(id);
+        if (event == null) {
+            return Result.fail(404, "Event not found");
+        }
         boolean removed = userEventService.removeById(id);
         return removed ? Result.ok() : Result.fail(404, "Event not found");
+    }
+
+    private boolean canAccess(Long userId) {
+        if (AuthUtils.isAdmin()) {
+            return true;
+        }
+        Long currentUserId = AuthUtils.getCurrentUserId();
+        return currentUserId != null && currentUserId.equals(userId);
     }
 
     private void normalizeEventTime(UserEvent event) {

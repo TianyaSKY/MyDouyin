@@ -26,6 +26,10 @@ jwt:
   secret: test-secret-key-must-be-at-least-256-bits-long-for-HS256-algorithm
   expiration: 3600000
 
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

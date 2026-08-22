@@ -24,6 +24,10 @@ public class JwtUtils {
     public JwtUtils(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration}") long expiration) {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET is not set or shorter than 32 bytes; refusing to start with an insecure JWT secret");
+        }
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = expiration;
     }

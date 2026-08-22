@@ -3,6 +3,7 @@ package com.douyin.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.douyin.common.Result;
 import com.douyin.common.config.RabbitMQConfig;
+import com.douyin.common.util.AuthUtils;
 import com.douyin.common.util.MediaUrlResolver;
 import com.douyin.entity.dto.UploadCompleteRequest;
 import com.douyin.entity.dto.UploadCompleteResponse;
@@ -19,13 +20,10 @@ import com.douyin.service.VideoService;
 import com.douyin.service.VideoUploadService;
 import com.douyin.service.UserVideoActionService;
 import com.douyin.service.VideoStatsDailyService;
-import com.douyin.service.security.JwtUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
@@ -164,6 +162,13 @@ public class VideoController {
      */
     @PutMapping("/{id}")
     public Result<Video> update(@PathVariable Long id, @Valid @RequestBody Video video) {
+        Video existing = videoService.getById(id);
+        if (existing == null) {
+            return Result.fail(404, "Video not found");
+        }
+        if (!canModify(existing)) {
+            return Result.fail(403, "无权限修改该视频");
+        }
         try {
             if (video.getCoverUrl() != null) {
                 video.setCoverUrl(mediaUrlResolver.normalizeForStorage(video.getCoverUrl()));
@@ -191,6 +196,9 @@ public class VideoController {
      */
     @PutMapping("/{id}/status")
     public Result<Void> updateStatus(@PathVariable Long id, @RequestParam VideoStatus status) {
+        if (!AuthUtils.isAdmin()) {
+            return Result.fail(403, "无权限修改视频状态");
+        }
         Video video = new Video();
         video.setId(id);
         video.setStatus(status);
@@ -203,6 +211,13 @@ public class VideoController {
      */
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
+        Video video = videoService.getById(id);
+        if (video == null) {
+            return Result.fail(404, "Video not found");
+        }
+        if (!canModify(video)) {
+            return Result.fail(403, "无权限删除该视频");
+        }
         boolean removed = videoService.removeById(id);
         return removed ? Result.ok() : Result.fail(404, "Video not found");
     }
@@ -212,7 +227,7 @@ public class VideoController {
      */
     @PostMapping("/{id}/like")
     public Result<Map<String, Object>> likeVideo(@PathVariable Long id) {
-        Long userId = getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         if (userId == null) {
             return Result.fail(401, "未登录");
         }
@@ -247,7 +262,7 @@ public class VideoController {
      */
     @DeleteMapping("/{id}/like")
     public Result<Map<String, Object>> unlikeVideo(@PathVariable Long id) {
-        Long userId = getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         if (userId == null) {
             return Result.fail(401, "未登录");
         }
@@ -269,7 +284,7 @@ public class VideoController {
             return Result.fail(404, "Video not found");
         }
 
-        Long userId = getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         boolean liked = userId != null && userVideoActionService.isVideoLikedByUser(userId, id);
         long likeCount = userVideoActionService.countActiveLikes(id);
 
@@ -301,7 +316,7 @@ public class VideoController {
     @PostMapping("/{id}/share")
     public Result<Map<String, Object>> shareVideo(@PathVariable Long id,
                                                    @RequestBody(required = false) Map<String, Object> body) {
-        Long userId = getCurrentUserId();
+        Long userId = AuthUtils.getCurrentUserId();
         if (userId == null) {
             return Result.fail(401, "未登录");
         }
@@ -379,6 +394,14 @@ public class VideoController {
         return Result.ok(response);
     }
 
+    private boolean canModify(Video video) {
+        if (AuthUtils.isAdmin()) {
+            return true;
+        }
+        Long userId = AuthUtils.getCurrentUserId();
+        return userId != null && userId.equals(video.getAuthorId());
+    }
+
     private void toPublicUrls(IPage<Video> page) {
         if (page == null || page.getRecords() == null) {
             return;
@@ -396,15 +419,4 @@ public class VideoController {
         video.setVideoUrl(mediaUrlResolver.toPublicUrl(video.getVideoUrl()));
     }
 
-    private Long getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
-            return null;
-        }
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof JwtUserDetails jwtUserDetails) {
-            return jwtUserDetails.getUserId();
-        }
-        return null;
-    }
 }
