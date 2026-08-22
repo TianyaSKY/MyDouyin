@@ -2,6 +2,7 @@
 Recall API 路由
 """
 from fastapi import APIRouter
+from starlette.concurrency import run_in_threadpool
 
 from app.schemas import VectorRecallRequest
 from app.services import milvus_service
@@ -22,7 +23,7 @@ async def vector_recall(request: VectorRecallRequest):
     user_vector = request.user_vector
     top_k = request.top_k
 
-    videos = milvus_service.search_similar_videos(user_vector, top_k)
+    videos = await run_in_threadpool(milvus_service.search_similar_videos, user_vector, top_k)
     video_ids = [v["video_id"] for v in videos]
 
     return {

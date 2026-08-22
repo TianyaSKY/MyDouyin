@@ -3,6 +3,7 @@ Embedding API 路由
 """
 
 from fastapi import APIRouter, HTTPException
+from starlette.concurrency import run_in_threadpool
 import time
 
 from app.schemas import (
@@ -29,7 +30,8 @@ async def generate_video_embedding(request: VideoEmbeddingRequest):
     - **title**: 视频标题
     - **tags**: 视频标签列表
     """
-    embedding = video_embedding_service.generate_embedding(
+    embedding = await run_in_threadpool(
+        video_embedding_service.generate_embedding,
         video_id=request.video_id,
         title=request.title,
         tags=request.tags,
@@ -53,7 +55,8 @@ async def generate_video_embeddings_batch(request: BatchVideoEmbeddingRequest):
     video_items = (
         [item.model_dump() for item in request.videos] if request.videos else None
     )
-    embeddings = video_embedding_service.generate_embeddings_batch(
+    embeddings = await run_in_threadpool(
+        video_embedding_service.generate_embeddings_batch,
         video_ids=request.video_ids,
         video_items=video_items,
     )
@@ -68,7 +71,7 @@ async def query_video_embeddings(request: VideoEmbeddingQueryRequest):
 
     - **video_ids**: 视频ID列表
     """
-    embeddings = milvus_service.get_video_embeddings(request.video_ids)
+    embeddings = await run_in_threadpool(milvus_service.get_video_embeddings, request.video_ids)
 
     return BatchVideoEmbeddingResponse(embeddings=embeddings, count=len(embeddings))
 
@@ -88,7 +91,8 @@ async def insert_video_embedding(request: InsertVideoEmbeddingRequest):
         if request.created_ts is not None
         else int(time.time() * 1000)
     )
-    success = milvus_service.insert_video_embedding(
+    success = await run_in_threadpool(
+        milvus_service.insert_video_embedding,
         video_id=request.video_id,
         embedding=request.embedding,
         author_id=request.author_id,
@@ -110,7 +114,8 @@ async def calculate_user_embedding(request: UserEmbeddingRequest):
     """
     events_data = [event.model_dump() for event in request.recent_events]
 
-    embedding = user_embedding_service.calculate_embedding(
+    embedding = await run_in_threadpool(
+        user_embedding_service.calculate_embedding,
         user_id=request.user_id, recent_events=events_data
     )
 

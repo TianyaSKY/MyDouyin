@@ -49,9 +49,28 @@ class ModelManager:
         
         # 标签词表
         self.tag_vocab = self._build_tag_vocab()
-        
+
+        # 按实际加载结果追踪状态
+        self._model_loaded = {
+            "video_encoder": False,
+            "user_encoder": False,
+            "ranking_model": False,
+        }
+        self._try_load_checkpoints()
+
         self._initialized = True
-        logger.info("Models initialized successfully")
+        logger.info("Models initialized successfully (status: %s)", self._model_loaded)
+
+    def _try_load_checkpoints(self):
+        """尝试从 MODEL_PATH 加载已训练权重；不存在或失败则保持随机初始化。"""
+        from pathlib import Path
+        model_dir = Path(settings.MODEL_PATH)
+        for name in self._model_loaded:
+            path = model_dir / f"{name}.pt"
+            if path.exists():
+                self.load_model_weights(name, str(path))
+            else:
+                logger.warning("No checkpoint for %s at %s; using random initialization", name, path)
     
     def _build_tag_vocab(self) -> Dict[str, int]:
         """构建标签词表"""
@@ -84,15 +103,17 @@ class ModelManager:
                 logger.info(f"Loaded ranking_model from {checkpoint_path}")
             else:
                 logger.warning(f"Unknown model name: {model_name}")
+                return
+            self._model_loaded[model_name] = True
         except Exception as e:
-            logger.error(f"Error loading model {model_name}: {e}")
+            logger.warning("Failed to load %s from %s; keeping random initialization: %s",
+                           model_name, checkpoint_path, e)
     
     def get_model_status(self) -> Dict[str, str]:
         """获取模型状态"""
         return {
-            "video_encoder": "loaded",
-            "user_encoder": "loaded",
-            "ranking_model": "loaded"
+            name: ("loaded" if loaded else "random_init")
+            for name, loaded in self._model_loaded.items()
         }
 
 

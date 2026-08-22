@@ -44,8 +44,11 @@ class Settings(BaseSettings):
     MYSQL_HOST: str = "localhost"
     MYSQL_PORT: int = 3306
     MYSQL_USER: str = "root"
-    MYSQL_PASSWORD: str = "root"
+    MYSQL_PASSWORD: str = ""
     MYSQL_DATABASE: str = "douyin"
+
+    # CORS 配置（recommend 仅被 backend 服务端调用，默认不允许任何浏览器跨域来源）
+    CORS_ORIGINS: list = []
 
     # Milvus 配置
     MILVUS_HOST: str = "localhost"
