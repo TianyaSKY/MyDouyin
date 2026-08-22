@@ -4,6 +4,7 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,25 +21,68 @@ public class RabbitMQConfig {
     public static final String VIDEO_EMBEDDING_ROUTING_KEY = "event.video_embedding";
     public static final String COMMENT_QUEUE_NAME = "event.comment.queue";
     public static final String COMMENT_ROUTING_KEY = "event.comment";
+    public static final String DLX_NAME = "event.dlx";
 
     @Bean
     public DirectExchange exchange() {
         return new DirectExchange(EXCHANGE_NAME);
     }
 
+    @Bean
+    public DirectExchange deadLetterExchange() {
+        return new DirectExchange(DLX_NAME);
+    }
+
     @Bean("userEventQueue")
     public Queue userEventQueue() {
-        return new Queue(QUEUE_NAME, true);
+        return durableWithDlq(QUEUE_NAME);
     }
 
     @Bean("videoEmbeddingQueue")
     public Queue videoEmbeddingQueue() {
-        return new Queue(VIDEO_EMBEDDING_QUEUE_NAME, true);
+        return durableWithDlq(VIDEO_EMBEDDING_QUEUE_NAME);
     }
 
     @Bean("commentQueue")
     public Queue commentQueue() {
-        return new Queue(COMMENT_QUEUE_NAME, true);
+        return durableWithDlq(COMMENT_QUEUE_NAME);
+    }
+
+    @Bean("userEventDlq")
+    public Queue userEventDlq() {
+        return new Queue(QUEUE_NAME + ".dlq", true);
+    }
+
+    @Bean("videoEmbeddingDlq")
+    public Queue videoEmbeddingDlq() {
+        return new Queue(VIDEO_EMBEDDING_QUEUE_NAME + ".dlq", true);
+    }
+
+    @Bean("commentDlq")
+    public Queue commentDlq() {
+        return new Queue(COMMENT_QUEUE_NAME + ".dlq", true);
+    }
+
+    @Bean
+    public Binding userEventDlqBinding(@Qualifier("userEventDlq") Queue queue) {
+        return BindingBuilder.bind(queue).to(deadLetterExchange()).with(QUEUE_NAME + ".dlq");
+    }
+
+    @Bean
+    public Binding videoEmbeddingDlqBinding(@Qualifier("videoEmbeddingDlq") Queue queue) {
+        return BindingBuilder.bind(queue).to(deadLetterExchange()).with(VIDEO_EMBEDDING_QUEUE_NAME + ".dlq");
+    }
+
+    @Bean
+    public Binding commentDlqBinding(@Qualifier("commentDlq") Queue queue) {
+        return BindingBuilder.bind(queue).to(deadLetterExchange()).with(COMMENT_QUEUE_NAME + ".dlq");
+    }
+
+    private static Queue durableWithDlq(String name) {
+        return QueueBuilder.durable(name)
+                .deadLetterExchange(DLX_NAME)
+                .deadLetterRoutingKey(name + ".dlq")
+                .build();
     }
 
     @Bean

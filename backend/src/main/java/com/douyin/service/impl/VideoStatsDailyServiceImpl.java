@@ -71,6 +71,28 @@ public class VideoStatsDailyServiceImpl extends ServiceImpl<VideoStatsDailyMappe
     }
 
     @Override
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "videoTotalStats", key = "#videoId", condition = "#videoId != null"),
+            @CacheEvict(cacheNames = "authorTotalLikes", allEntries = true,
+                    condition = "#eventType != null && #eventType.name() == 'LIKE'")
+    })
+    public void decrementStats(Long videoId, EventType eventType) {
+        if (videoId == null || eventType == null) {
+            return;
+        }
+        LocalDate today = LocalDate.now();
+
+        long impr = eventType == EventType.IMPR ? -1 : 0;
+        long click = eventType == EventType.CLICK ? -1 : 0;
+        long like = eventType == EventType.LIKE ? -1 : 0;
+        long finish = eventType == EventType.FINISH ? -1 : 0;
+        long share = eventType == EventType.SHARE ? -1 : 0;
+        long comment = eventType == EventType.COMMENT ? -1 : 0;
+
+        baseMapper.upsertStats(videoId, today, impr, click, like, finish, share, comment, 0);
+    }
+
+    @Override
     @Cacheable(cacheNames = "authorTotalLikes", key = "#authorId", condition = "#authorId != null")
     public Long getTotalLikesByAuthor(Long authorId) {
         return baseMapper.sumLikesByAuthorId(authorId);

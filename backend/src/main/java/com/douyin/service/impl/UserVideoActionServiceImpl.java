@@ -7,6 +7,9 @@ import com.douyin.entity.UserVideoAction;
 import com.douyin.entity.enums.UserVideoActionType;
 import com.douyin.mapper.UserVideoActionMapper;
 import com.douyin.service.UserVideoActionService;
+import com.douyin.service.VideoStatsDailyService;
+import com.douyin.entity.enums.EventType;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -14,8 +17,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class UserVideoActionServiceImpl extends ServiceImpl<UserVideoActionMapper, UserVideoAction>
         implements UserVideoActionService {
+
+    private final VideoStatsDailyService videoStatsDailyService;
 
     private static final int STATUS_ACTIVE = 1;
     private static final int STATUS_INACTIVE = 0;
@@ -69,6 +75,7 @@ public class UserVideoActionServiceImpl extends ServiceImpl<UserVideoActionMappe
 
         action.setStatus(STATUS_INACTIVE);
         updateById(action);
+        videoStatsDailyService.decrementStats(videoId, EventType.LIKE);
         return true;
     }
 

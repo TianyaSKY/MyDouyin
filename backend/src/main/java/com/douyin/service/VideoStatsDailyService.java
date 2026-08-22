@@ -28,6 +28,14 @@ public interface VideoStatsDailyService extends IService<VideoStatsDaily> {
      */
     void incrementStats(Long videoId, EventType eventType, int watchMs);
 
+    /**
+     * Decrement stats counters for a video on the current date (e.g. unlike).
+     * Counters are clamped at 0 to tolerate out-of-order async increments.
+     * @param videoId the video ID
+     * @param eventType the type of event (impr, click, like, finish)
+     */
+    void decrementStats(Long videoId, EventType eventType);
+
     Long getTotalLikesByAuthor(Long authorId);
 
     VideoStatsDaily getTotalStatsByVideo(Long videoId);

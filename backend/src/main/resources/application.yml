@@ -27,6 +27,14 @@ spring:
     port: ${RABBITMQ_AMQP_PORT:5672}
     username: ${RABBITMQ_USER:user}
     password: ${RABBITMQ_PASSWORD:password}
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 1000
+          multiplier: 2.0
+          max-attempts: 3
+        default-requeue-rejected: false
 
   servlet:
     multipart:

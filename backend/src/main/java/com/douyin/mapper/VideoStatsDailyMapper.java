@@ -19,13 +19,13 @@ public interface VideoStatsDailyMapper extends BaseMapper<VideoStatsDaily> {
     @Update("INSERT INTO video_daily_stats (video_id, date, impr_cnt, click_cnt, like_cnt, finish_cnt, share_cnt, comment_cnt, watch_time_sum) " +
             "VALUES (#{videoId}, #{date}, #{impr}, #{click}, #{like}, #{finish}, #{share}, #{comment}, #{watchMs}) " +
             "ON DUPLICATE KEY UPDATE " +
-            "impr_cnt = impr_cnt + #{impr}, " +
-            "click_cnt = click_cnt + #{click}, " +
-            "like_cnt = like_cnt + #{like}, " +
-            "finish_cnt = finish_cnt + #{finish}, " +
-            "share_cnt = share_cnt + #{share}, " +
-            "comment_cnt = comment_cnt + #{comment}, " +
-            "watch_time_sum = watch_time_sum + #{watchMs}")
+            "impr_cnt = GREATEST(impr_cnt + #{impr}, 0), " +
+            "click_cnt = GREATEST(click_cnt + #{click}, 0), " +
+            "like_cnt = GREATEST(like_cnt + #{like}, 0), " +
+            "finish_cnt = GREATEST(finish_cnt + #{finish}, 0), " +
+            "share_cnt = GREATEST(share_cnt + #{share}, 0), " +
+            "comment_cnt = GREATEST(comment_cnt + #{comment}, 0), " +
+            "watch_time_sum = GREATEST(watch_time_sum + #{watchMs}, 0)")
     void upsertStats(@Param("videoId") Long videoId,
                      @Param("date") LocalDate date,
                      @Param("impr") long impr,

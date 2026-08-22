@@ -50,8 +50,8 @@ public class UserEventConsumer {
 
         } catch (Exception e) {
             log.error("Failed to process UserEvent: {}", event, e);
-            // In production, we might want to throw exception to retry or send to DLQ.
-            // For now, just log error.
+            // Rethrow so Spring retry kicks in and the message lands in the DLQ after retries exhaust.
+            throw e;
         }
     }
 

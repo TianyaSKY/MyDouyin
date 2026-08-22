@@ -123,6 +123,8 @@ public class CommentEventConsumer {
 
         } catch (Exception e) {
             log.error("Failed to process CommentEvent: {}", message, e);
+            // Rethrow so Spring retry kicks in and the message lands in the DLQ after retries exhaust.
+            throw e;
         }
     }
 }
