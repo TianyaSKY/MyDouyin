@@ -24,6 +24,47 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
     const watchedMsRef = useRef(0);
     const lastPlaybackSecRef = useRef(0);
     const clickReportedRef = useRef(false);
+    const playPromiseRef = useRef(null);
+
+    // Pause safely: wait for any pending play() to settle first to avoid
+    // "play() request was interrupted by a call to pause()" AbortError.
+    const safePause = useCallback((videoEl) => {
+        if (!videoEl) {
+            return;
+        }
+        if (playPromiseRef.current) {
+            playPromiseRef.current.then(() => {
+                videoEl.pause();
+            }).catch(() => {
+                // play() was already rejected (e.g. by a concurrent pause); nothing to do
+            });
+        } else {
+            videoEl.pause();
+        }
+    }, []);
+
+    const requestPlay = useCallback((videoEl, onSuccess) => {
+        const playPromise = videoEl.play();
+        if (playPromise === undefined) {
+            onSuccess?.();
+            return;
+        }
+        playPromiseRef.current = playPromise;
+        playPromise
+            .then(() => {
+                if (playPromiseRef.current === playPromise) {
+                    playPromiseRef.current = null;
+                }
+                onSuccess?.();
+            })
+            .catch(() => {
+                if (playPromiseRef.current === playPromise) {
+                    playPromiseRef.current = null;
+                }
+                // play() interrupted by pause() or autoplay policy; benign
+                setPlaying(false);
+            });
+    }, []);
 
     const resetWatchSession = useCallback(() => {
         watchedMsRef.current = 0;
@@ -61,22 +102,16 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
         if (isActive) {
             resetWatchSession();
             clickReportedRef.current = false;
-            const playPromise = videoEl.play();
-            if (playPromise !== undefined) {
-                playPromise.then(_ => {
-                    setPlaying(true);
-                    // Report CLICK once per video session (user engaged with this video)
-                    if (!clickReportedRef.current) {
-                        track('CLICK', video.id);
-                        clickReportedRef.current = true;
-                    }
-                }).catch(error => {
-                    console.log("Auto-play prevented:", error);
-                    setPlaying(false);
-                });
-            }
+            requestPlay(videoEl, () => {
+                setPlaying(true);
+                // Report CLICK once per video session (user engaged with this video)
+                if (!clickReportedRef.current) {
+                    track('CLICK', video.id);
+                    clickReportedRef.current = true;
+                }
+            });
         } else {
-            videoEl.pause();
+            safePause(videoEl);
             setPlaying(false);
             videoEl.currentTime = 0;
             resetWatchSession();
@@ -88,7 +123,7 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
                 reportLeave();
             }
         };
-    }, [isActive, reportLeave, resetWatchSession]);
+    }, [isActive, reportLeave, resetWatchSession, requestPlay, safePause, track, video.id]);
 
     const handleVideoPress = () => {
         const videoEl = videoRef.current;
@@ -98,18 +133,12 @@ const VideoPlayer = ({ video, isActive, onDelete }) => {
 
         if (videoEl.paused) {
             lastPlaybackSecRef.current = videoEl.currentTime || 0;
-            const playPromise = videoEl.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    setPlaying(true);
-                }).catch(err => {
-                    console.error("Play failed:", err);
-                    setPlaying(false);
-                });
-            }
+            requestPlay(videoEl, () => {
+                setPlaying(true);
+            });
         } else {
             syncWatchProgress();
-            videoEl.pause();
+            safePause(videoEl);
             setPlaying(false);
         }
     };
