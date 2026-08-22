@@ -60,3 +60,4 @@ node_modules/
 *.gguf
 recommend/models/
 .cache/huggingface/
+/.agents/
