@@ -9,6 +9,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -65,7 +66,7 @@ public class RecommendServiceClient {
             return null;
 
         } catch (Exception e) {
-            log.error("Error calling recommend service for video embedding", e);
+            logRecommendServiceError("video embedding", e);
             return null;
         }
     }
@@ -97,7 +98,7 @@ public class RecommendServiceClient {
             return new HashMap<>();
 
         } catch (Exception e) {
-            log.error("Error calling recommend service for batch video embeddings", e);
+            logRecommendServiceError("batch video embeddings", e);
             return new HashMap<>();
         }
     }
@@ -128,7 +129,7 @@ public class RecommendServiceClient {
             return new HashMap<>();
 
         } catch (Exception e) {
-            log.error("Error querying stored video embeddings", e);
+            logRecommendServiceError("stored video embedding query", e);
             return new HashMap<>();
         }
     }
@@ -166,7 +167,7 @@ public class RecommendServiceClient {
             return false;
 
         } catch (Exception e) {
-            log.error("Error inserting video embedding for video {}", videoId, e);
+            logRecommendServiceError("video embedding insert for video " + videoId, e);
             return false;
         }
     }
@@ -199,7 +200,7 @@ public class RecommendServiceClient {
             return null;
 
         } catch (Exception e) {
-            log.error("Error calling recommend service for user embedding", e);
+            logRecommendServiceError("user embedding", e);
             return null;
         }
     }
@@ -235,7 +236,7 @@ public class RecommendServiceClient {
             return null;
 
         } catch (Exception e) {
-            log.error("Error calling recommend service for ranking", e);
+            logRecommendServiceError("ranking", e);
             return null;
         }
     }
@@ -263,7 +264,7 @@ public class RecommendServiceClient {
             log.debug("Long-term vector not found in Milvus for user {}", userId);
             return null;
         } catch (Exception e) {
-            log.error("Error getting long-term vector for user {}", userId, e);
+            logRecommendServiceError("long-term vector lookup for user " + userId, e);
             return null;
         }
     }
@@ -291,7 +292,7 @@ public class RecommendServiceClient {
             log.warn("Interest vector endpoint not available or user {} has no interest vector", userId);
             return null;
         } catch (Exception e) {
-            log.error("Error getting interest vector for user {}", userId, e);
+            logRecommendServiceError("interest vector lookup for user " + userId, e);
             return null;
         }
     }
@@ -324,7 +325,7 @@ public class RecommendServiceClient {
             return false;
 
         } catch (Exception e) {
-            log.error("Error updating long-term vector for user {}", userId, e);
+            logRecommendServiceError("long-term vector update for user " + userId, e);
             return false;
         }
     }
@@ -358,7 +359,7 @@ public class RecommendServiceClient {
             return false;
 
         } catch (Exception e) {
-            log.error("Error inserting user vector for user {}", userId, e);
+            logRecommendServiceError("user vector insert for user " + userId, e);
             return false;
         }
     }
@@ -392,7 +393,7 @@ public class RecommendServiceClient {
             return null;
 
         } catch (Exception e) {
-            log.error("Error performing vector recall for user {}", userId, e);
+            logRecommendServiceError("vector recall for user " + userId, e);
             return null;
         }
     }
@@ -406,7 +407,7 @@ public class RecommendServiceClient {
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             return response.getStatusCode() == HttpStatus.OK;
         } catch (Exception e) {
-            log.error("Recommend service health check failed", e);
+            logRecommendServiceError("health check", e);
             return false;
         }
     }
@@ -459,10 +460,23 @@ public class RecommendServiceClient {
             return null;
 
         } catch (Exception e) {
-            log.error("Error calling recommend service for comment preference, userId={}, videoId={}",
-                    userId, videoId, e);
+            logRecommendServiceError("comment preference for user " + userId + ", video " + videoId, e);
             return null;
         }
+    }
+
+    private void logRecommendServiceError(String operation, Exception e) {
+        if (e instanceof RestClientResponseException responseException) {
+            log.error(
+                    "Recommend service HTTP error during {}: status={}, body={}",
+                    operation,
+                    responseException.getStatusCode(),
+                    responseException.getResponseBodyAsString(),
+                    e
+            );
+            return;
+        }
+        log.error("Error calling recommend service during {}", operation, e);
     }
 
     // ==================== 响应模型 ====================

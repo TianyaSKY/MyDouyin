@@ -30,7 +30,7 @@ export default function DashboardLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0B0F19] text-white flex flex-col font-sans">
+    <div className="h-screen bg-[#0B0F19] text-white flex flex-col font-sans overflow-hidden">
       {/* Header */}
       <header className="border-b border-gray-800 bg-[#0B0F19]/80 backdrop-blur-md sticky top-0 z-50 shrink-0">
         <div className="flex items-center justify-between px-6 h-14">
@@ -80,7 +80,7 @@ export default function DashboardLayout() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 overflow-y-auto max-w-[1920px] mx-auto w-full">
+      <main className="flex-1 p-4 pb-6 overflow-y-auto max-w-[1920px] mx-auto w-full">
         {activeTab === 'overview' && (
           <>
             <OverviewCards />

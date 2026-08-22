@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   View, Text, FlatList, Dimensions, StyleSheet, Image,
   TouchableWithoutFeedback, TouchableOpacity,
-  ActivityIndicator, Animated, Share, Platform,
+  ActivityIndicator, Animated, Share, Platform, AppState,
 } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from '../contexts/AuthContext';
+import { useIsFocused } from '@react-navigation/native';
 import { getFeed } from '../api/video';
 import { likeVideo, unlikeVideo, getVideoLikeStatus, getShareCount, shareVideo } from '../api/video';
 import { getCommentCount } from '../api/comment';
@@ -332,6 +333,7 @@ const vi = StyleSheet.create({
    ══════════════════════════════════════════════ */
 const FeedScreen = ({ navigation }) => {
   const { token, user } = useAuthContext();
+  const isFocused = useIsFocused();
   const [videos, setVideos] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -346,6 +348,38 @@ const FeedScreen = ({ navigation }) => {
 
   // Track the currently loaded video URL to avoid redundant replaces
   const currentSourceRef = useRef(null);
+  const mountedRef = useRef(true);
+  const isFocusedRef = useRef(isFocused);
+  const hasVideosRef = useRef(false);
+
+  const safeSetMuted = useCallback((muted) => {
+    if (!mountedRef.current) return;
+    try { player.muted = muted; } catch {}
+  }, [player]);
+
+  const safePause = useCallback(() => {
+    if (!mountedRef.current) return;
+    try { player.pause()?.catch?.(() => {}); } catch {}
+  }, [player]);
+
+  const safePlay = useCallback(() => {
+    if (!mountedRef.current) return;
+    try { player.play()?.catch?.(() => {}); } catch {}
+  }, [player]);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    isFocusedRef.current = isFocused;
+  }, [isFocused]);
+
+  useEffect(() => {
+    hasVideosRef.current = videos.length > 0;
+  }, [videos.length]);
 
   // When active video changes, swap the source
   useEffect(() => {
@@ -353,20 +387,43 @@ const FeedScreen = ({ navigation }) => {
     if (!activeVideo) return;
 
     const newSource = getMediaUrl(activeVideo.videoUrl);
-    if (!newSource || newSource === currentSourceRef.current) return;
+    if (!newSource) return;
+
+    if (newSource === currentSourceRef.current) {
+      if (isFocusedRef.current && AppState.currentState === 'active') {
+        safeSetMuted(false);
+        safePlay();
+      } else {
+        safePause();
+        safeSetMuted(true);
+      }
+      return;
+    }
 
     currentSourceRef.current = newSource;
 
-    // Replace source and play
+    // Replace source and only play while this screen is focused.
+    let cancelled = false;
     (async () => {
       try {
         await player.replaceAsync(newSource);
-        player.play();
+        if (cancelled) return;
+        if (isFocusedRef.current && AppState.currentState === 'active') {
+          safeSetMuted(false);
+          safePlay();
+        } else {
+          safePause();
+          safeSetMuted(true);
+        }
       } catch (err) {
         console.warn('Video replace failed:', err);
       }
     })();
-  }, [activeIndex, videos, player]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeIndex, videos, player, safePause, safePlay, safeSetMuted]);
 
   // Load feed data
   const loadVideos = useCallback(async () => {
@@ -389,6 +446,35 @@ const FeedScreen = ({ navigation }) => {
 
   useEffect(() => { if (user && videos.length === 0) loadVideos(); }, [user]);
 
+  // Pause/Play feed video player when screen focus or AppState changes.
+  // Also mute on blur (in case pause alone doesn't release audio) and
+  // restore mute state on focus.
+  useEffect(() => {
+    if (!player) return;
+
+    if (isFocused) {
+      safeSetMuted(false);
+      if (videos.length > 0) safePlay();
+    } else {
+      safePause();
+      // Mute as a safety net: even if pause doesn't stop native audio,
+      // the volume will be silenced until the screen is focused again.
+      safeSetMuted(true);
+    }
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState !== 'active') {
+        safePause();
+        safeSetMuted(true);
+      } else if (isFocusedRef.current && hasVideosRef.current) {
+        safeSetMuted(false);
+        safePlay();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [isFocused, player, videos.length, safePause, safePlay, safeSetMuted]);
+
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       const idx = viewableItems[0].index;
@@ -408,9 +494,12 @@ const FeedScreen = ({ navigation }) => {
   }, [navigation, user?.userId]);
 
   const handleTogglePlay = useCallback(() => {
-    if (player.playing) player.pause();
-    else player.play();
-  }, [player]);
+    if (player.playing) safePause();
+    else {
+      safeSetMuted(false);
+      safePlay();
+    }
+  }, [player, safePause, safePlay, safeSetMuted]);
 
   const renderItem = useCallback(({ item, index }) => (
     <FeedItem

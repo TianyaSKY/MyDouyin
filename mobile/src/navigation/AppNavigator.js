@@ -14,6 +14,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import UploadScreen from '../screens/UploadScreen';
 import CommentScreen from '../screens/CommentScreen';
 import DashboardScreen from '../screens/DashboardScreen';
+import SingleVideoScreen from '../screens/SingleVideoScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -131,6 +132,10 @@ export default function AppNavigator() {
             <Stack.Screen
               name="UserProfile"
               component={ProfileScreen}
+            />
+            <Stack.Screen
+              name="SingleVideo"
+              component={SingleVideoScreen}
             />
           </>
         )}

@@ -146,7 +146,7 @@ class MilvusService:
 
             coll_interest = Collection("user_interest_vectors")
             res_interest = coll_interest.query(
-                expr=f"user_id == {user_id}", output_fields=["vector"]
+                expr=f"user_id == {user_id}", output_fields=["vector", "updated_at"]
             )
 
             if not res_long and not res_interest:
@@ -154,20 +154,20 @@ class MilvusService:
                 return None
 
             result = {
-                "long_term_vec": res_long[0]["vector"]
+                "long_term_vec": [float(value) for value in res_long[0]["vector"]]
                 if res_long
                 else [0.0] * EMBEDDING_DIM,
-                "interest_vec": res_interest[0]["vector"]
+                "interest_vec": [float(value) for value in res_interest[0]["vector"]]
                 if res_interest
                 else [0.0] * EMBEDDING_DIM,
-                "updated_at": res_long[0]["updated_at"]
+                "updated_at": int(res_long[0]["updated_at"])
                 if res_long
-                else (res_interest[0]["updated_at"] if res_interest else 0),
+                else int(res_interest[0]["updated_at"]),
             }
             return result
 
         except Exception as e:
-            logger.error(f"Error getting user vector: {e}")
+            logger.error(f"Error getting user vector: {e}", exc_info=True)
             return None
 
     def update_user_long_term_vector(

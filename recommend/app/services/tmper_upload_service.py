@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 from urllib.parse import quote, urlsplit
 
-from qiniu import Auth, put_file_v2
+from qiniu import Auth, put_file
 
 from app.core.config import settings
 
@@ -66,7 +66,7 @@ class QiniuUploadService:
         storage_key = self._build_storage_key(local_file.name, key)
         auth = Auth(settings.QINIU_ACCESS_KEY, settings.QINIU_SECRET_KEY)
         token = auth.upload_token(settings.QINIU_BUCKET_NAME)
-        ret, info = put_file_v2(token, storage_key, str(local_file))
+        ret, info = put_file(token, storage_key, str(local_file))
 
         if info.status_code != 200:
             raise ValueError(

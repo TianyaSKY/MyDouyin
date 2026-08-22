@@ -7,7 +7,7 @@ pydantic-settings==2.1.0
 python-multipart==0.0.6
 requests==2.31.0
 redis==5.0.1
-pymilvus==2.3.3
+pymilvus>=2.6.0,<2.7.0
 pymysql==1.1.0
 qiniu==7.14.0
 transformers==4.36.0

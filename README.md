@@ -24,12 +24,25 @@
 
 ![用户主页](docs/images/screenshot_profile.png)
 
+### 4. 数据大屏
+
+管理端提供多维度运营数据看板，包含 **数据总览、用户洞察、内容运营、推荐效果、评论情感** 五个 Tab，基于 ECharts 实现丰富的可视化图表。支持实时事件监控、用户增长趋势、行为转化漏斗、标签云、CTR 趋势等核心指标。前端与移动端均已实现。
+
+![数据大屏](docs/images/data_display.png)
+
+### 5. 评论情感分析
+
+基于 **Erlangshen-Roberta-110M-Sentiment**（IDEA-CCNL 中文 RoBERTa 情感模型）对用户评论进行深度学习情感分析。分析结果实时反馈到推荐向量计算和数据大屏。正面评论等同点赞权重，负面评论反向削弱关联。当模型不可用时自动降级到关键词匹配方案。
+
+![评论情感分析](docs/images/comment_analyse.png)
+
 ## 技术栈
 
 - 前端：React 18、Vite、TailwindCSS、React Router、Lucide React
 - 移动端：React Native、Expo、React Navigation、expo-av
 - 后端：Spring Boot 3、MyBatis-Plus、MySQL、Redis、RabbitMQ、Milvus SDK
-- 推荐：FastAPI、PyTorch、Pydantic v2、Redis、Milvus、DashScope
+- 推荐：FastAPI、PyTorch、Transformers（Erlangshen-Roberta-110M-Sentiment）、Pydantic v2、Redis、Milvus、DashScope
+- 可视化：ECharts（前端数据大屏）
 - 基础设施：Docker Compose、MySQL、Redis、RabbitMQ、Milvus、Attu
 
 ## 系统架构
@@ -69,6 +82,16 @@
 2. 调用 recommend `/api/embedding/video/query` 查询已存储视频向量
 3. 按标签分组，对每个标签下的视频向量求平均
 4. 将结果写入 Redis Hash：`recommend:tag:vectors`
+
+### 评论情感分析链路
+
+1. 用户发表评论后，backend 发送 `CommentEventMessage` 到 RabbitMQ `comment.queue`
+2. `CommentEventConsumer` 消费消息，调用 recommend `/api/comment/preference`
+3. recommend 使用 Erlangshen-Roberta-110M-Sentiment 模型进行情感分析（返回 0~1 分数）
+4. 情感分数映射为行为权重：正面 (>0.6) → 1.0，中性 → 0.3，负面 (<0.4) → -0.5
+5. 结合用户-视频向量余弦相似度，加权融合得到综合偏好分数
+6. 偏好分数写入 `user_comment_preferences` 表，同时触发用户向量实时更新
+7. 情感统计数据通过 Dashboard API 聚合展示到数据大屏
 
 ## 目录结构
 
@@ -172,9 +195,10 @@ npm run build --prefix frontend
 ```bash
 cd mobile
 npm install
-npx expo start
+npx expo start --localhost --port 8085
 ```
 
 > **注意**：移动端需要修改 `mobile/src/constants/config.js` 中的 `API_BASE_URL` 为你的后端地址。
+>
 > - Android 模拟器：`http://10.0.2.2:8081`
 > - 真机调试：`http://<你的局域网IP>:8081`
